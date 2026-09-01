@@ -6,22 +6,22 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 
-app.post("/signup", async (req: any, res: any) => {
+app.post("/signup", async (req : any, res: any ) => {
 
-    const { username, password } = req.body;
+    const {username, password } = req.body;
 
     await prisma.user.create({
-        data: {
+        data : {
             username,
             password
         }
     })
 
     res.json({
-        message: "signed up"
+        message : "signed up"
     })
 })
 
-app.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
-});
+ app.listen(PORT, () => {
+      console.log(`🚀 Backend running on http://localhost:${PORT}`);
+    });

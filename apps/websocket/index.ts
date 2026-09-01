@@ -11,6 +11,9 @@ interface User {
 
 const BOARDS: Record<string, User[]> = {};
 
+const USERS: Record<string, User[]> = {};
+
+
 const server = new WebSocketServer({ port: 8080 });
 
 server.on("connection", (ws) => {
@@ -40,7 +43,7 @@ server.on("connection", (ws) => {
                             type: "join",
                             userId: newUserId,
                         })
-                    );
+                    ); 
                 }
             }
 
