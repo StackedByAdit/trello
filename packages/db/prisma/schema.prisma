@@ -12,9 +12,88 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  MEMBER
+  ADMIN
+}
 
 model User {
-  id       String @id @default(uuid())
-  username String
-  password String
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  memberships   Membership[]
+  issueMappings IssueMapping[]
+  comments      Comment[]
+}
+
+model Organization {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  boards      Board[]
+}
+
+model Membership {
+  id     String @id @default(uuid())
+  userId String
+  orgId  String
+  role   Role   @default(MEMBER)
+
+  user User         @relation(fields: [userId], references: [id])
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model Board {
+  id             String       @id @default(uuid())
+  title          String
+  organizationId String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sections       Section[]
+  issues         Issue[]
+}
+
+model Section {
+  id      String  @id @default(uuid())
+  title   String
+  boardId String
+  order   Int
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+}
+
+model Issue {
+  id            String         @id @default(uuid())
+  title         String
+  description   String?
+  boardId       String
+  sectionId     String
+  createdAt     DateTime       @default(now())
+  board         Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  section       Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  issueMappings IssueMapping[]
+}
+
+model IssueMapping {
+  id      String @id @default(uuid())
+  userId  String
+  issueId String
+  user    User   @relation(fields: [userId], references: [id])
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  issueId   String
+  userId    String
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 }
