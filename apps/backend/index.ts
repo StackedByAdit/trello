@@ -2,6 +2,7 @@ import { prisma } from "db/client";
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { authMiddleware } from "./middleware";
 
 const app = express();
 
@@ -57,6 +58,58 @@ app.post("/signin", async (req: any, res: any) => {
         token
     });
 })
+
+app.post("/organization", authMiddleware, async (req: any, res: any) => {
+
+    const { name, description } = req.body;
+
+    const org = await prisma.organization.create({
+        data : {
+            name,
+            description
+        }
+    });
+
+    await prisma.membership.create({
+        data : {
+            userId : req.userId,
+            orgId : org.id,
+            role : "ADMIN"
+        }
+    });
+
+    res.json(org);
+});
+
+app.get("/organizations", authMiddleware, async (req: any, res: any) => {
+
+    const organizations = await prisma.organization.findMany({
+        where : {
+            memberships : {
+                some : {
+                    userId : req.userId
+                }
+            }
+        }
+    });
+
+    res.json(organizations);
+});
+
+app.delete("/organization", authMiddleware, async (req: any, res: any) => {
+
+    const { orgId } = req.body;
+
+    await prisma.organization.delete({
+        where : {
+            id : orgId
+        }
+    });
+
+    res.json({
+        message : "organization deleted"
+    });
+});
 
  app.listen(PORT, () => {
       console.log(`🚀 Backend running on http://localhost:${PORT}`);
