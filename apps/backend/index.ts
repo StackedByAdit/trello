@@ -111,6 +111,44 @@ app.delete("/organization", authMiddleware, async (req: any, res: any) => {
     });
 });
 
+app.post("/invite", authMiddleware, async (req: any, res: any) => {
+
+    const { email, orgId } = req.body;
+
+    const user = await prisma.user.findFirst({
+        where : {
+            email
+        }
+    });
+
+    if (!user) {
+        return res.status(404).json({
+            message : "user not found"
+        });
+    }
+
+    await prisma.membership.create({
+        data : {
+            userId : user.id,
+            orgId,
+            role : "MEMBER"
+        }
+    });
+
+    res.json({
+        message : "invited"
+    });
+});
+
+app.post("/accept", authMiddleware, async (req: any, res: any) => {
+
+    const { orgId } = req.body;
+
+    res.json({
+        message : "accepted"
+    });
+});
+
  app.listen(PORT, () => {
       console.log(`🚀 Backend running on http://localhost:${PORT}`);
     });
