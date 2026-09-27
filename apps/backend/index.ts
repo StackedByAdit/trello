@@ -149,6 +149,24 @@ app.post("/accept", authMiddleware, async (req: any, res: any) => {
     });
 });
 
+app.delete("/membership", authMiddleware, async (req: any, res: any) => {
+
+    const { userId, orgId } = req.body;
+
+    await prisma.membership.delete({
+        where : {
+            userId_orgId : {
+                userId,
+                orgId
+            }
+        }
+    });
+
+    res.json({
+        message : "member removed"
+    });
+});
+
  app.listen(PORT, () => {
       console.log(`🚀 Backend running on http://localhost:${PORT}`);
     });
