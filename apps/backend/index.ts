@@ -167,6 +167,49 @@ app.delete("/membership", authMiddleware, async (req: any, res: any) => {
     });
 });
 
- app.listen(PORT, () => {
-      console.log(`🚀 Backend running on http://localhost:${PORT}`);
+app.post("/board", authMiddleware, async (req: any, res: any) => {
+
+    const { title, organizationId } = req.body;
+
+    const board = await prisma.board.create({
+        data : {
+            title,
+            organizationId
+        }
     });
+
+    res.json(board);
+});
+
+app.get("/boards", authMiddleware, async (req: any, res: any) => {
+
+    const { orgId } = req.query;
+
+    const boards = await prisma.board.findMany({
+        where : {
+            organizationId : orgId as string
+        }
+    });
+
+    res.json(boards);
+});
+
+app.put("/board", authMiddleware, async (req: any, res: any) => {
+
+    const { boardId, title } = req.body;
+
+    const board = await prisma.board.update({
+        where : {
+            id : boardId
+        },
+        data : {
+            title
+        }
+    });
+
+    res.json(board);
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Backend running on http://localhost:${PORT}`);
+});
