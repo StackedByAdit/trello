@@ -210,6 +210,21 @@ app.put("/board", authMiddleware, async (req: any, res: any) => {
     res.json(board);
 });
 
+app.delete("/board", authMiddleware, async (req: any, res: any) => {
+
+    const { boardId } = req.body;
+
+    await prisma.board.delete({
+        where : {
+            id : boardId
+        }
+    });
+
+    res.json({
+        message : "board deleted"
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });
