@@ -14,17 +14,22 @@ const BOARDS: Record<string, User[]> = {};
 
 const USERS: Record<string, User[]> = {};
 
+const PORT = process.env.WS_PORT ? Number(process.env.WS_PORT) : (process.env.PORT ? Number(process.env.PORT) : 8080);
 
-const server = new WebSocketServer({ port: 8080 });
+const server = new WebSocketServer({ port: PORT });
 
 server.on("connection", (ws) => {
     const socket = ws as CustomWebSocket;
-    let joinedRoom = null;
 
     socket.on("message", async (data) => {
-        const parsedData = JSON.parse(data.toString());
+        let parsedData: any;
+        try {
+            parsedData = JSON.parse(data.toString());
+        } catch (e) {
+            return;
+        }
 
-        if (parsedData.type === "join") {
+        if (parsedData?.type === "join") {
             const boardId = parsedData.boardId;
             socket.roomId = boardId;
 
@@ -77,10 +82,12 @@ server.on("connection", (ws) => {
     socket.on("close", () => {
         Object.entries(BOARDS).forEach(([roomId, users]) => {
             const userExists = users.find((u) => u.socket === socket);
-            console.log(userExists);
             if (userExists) {
 
                 BOARDS[roomId] = users.filter((x) => x.socket !== socket);
+                if (BOARDS[roomId]?.length === 0) {
+                    delete BOARDS[roomId];
+                }
 
                 BOARDS[roomId]?.forEach((user) => {
                     user.socket.send(
@@ -94,3 +101,5 @@ server.on("connection", (ws) => {
         });
     });
 });
+
+export { server, BOARDS, USERS };
