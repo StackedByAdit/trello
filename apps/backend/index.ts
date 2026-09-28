@@ -225,6 +225,69 @@ app.delete("/board", authMiddleware, async (req: any, res: any) => {
     });
 });
 
+app.post("/section", authMiddleware, async (req: any, res: any) => {
+
+    const { title, boardId, order } = req.body;
+
+    const section = await prisma.section.create({
+        data : {
+            title,
+            boardId,
+            order
+        }
+    });
+
+    res.json(section);
+});
+
+app.put("/section", authMiddleware, async (req: any, res: any) => {
+
+    const { sectionId, title, order } = req.body;
+
+    const section = await prisma.section.update({
+        where : {
+            id : sectionId
+        },
+        data : {
+            title,
+            order
+        }
+    });
+
+    res.json(section);
+});
+
+app.get("/sections", authMiddleware, async (req: any, res: any) => {
+
+    const { boardId } = req.query;
+
+    const sections = await prisma.section.findMany({
+        where : {
+            boardId : boardId as string
+        },
+        orderBy : {
+            order : "asc"
+        }
+    });
+
+    res.json(sections);
+});
+
+app.delete("/section", authMiddleware, async (req: any, res: any) => {
+
+    const { sectionId } = req.body;
+
+    await prisma.section.delete({
+        where : {
+            id : sectionId
+        }
+    });
+
+    res.json({
+        message : "section deleted"
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });
