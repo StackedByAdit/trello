@@ -381,6 +381,52 @@ app.delete("/issue/:issueId", authMiddleware, async (req: any, res: any) => {
     });
 });
 
+app.post("/comment", authMiddleware, async (req: any, res: any) => {
+
+    const { text, issueId } = req.body;
+
+    const comment = await prisma.comment.create({
+        data : {
+            text,
+            issueId,
+            userId : req.userId
+        }
+    });
+
+    res.json(comment);
+});
+
+app.put("/comment", authMiddleware, async (req: any, res: any) => {
+
+    const { commentId, text } = req.body;
+
+    const comment = await prisma.comment.update({
+        where : {
+            id : commentId
+        },
+        data : {
+            text
+        }
+    });
+
+    res.json(comment);
+});
+
+app.delete("/comment", authMiddleware, async (req: any, res: any) => {
+
+    const { commentId } = req.body;
+
+    await prisma.comment.delete({
+        where : {
+            id : commentId
+        }
+    });
+
+    res.json({
+        message : "comment deleted"
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });
