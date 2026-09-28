@@ -288,6 +288,99 @@ app.delete("/section", authMiddleware, async (req: any, res: any) => {
     });
 });
 
+app.post("/issue", authMiddleware, async (req: any, res: any) => {
+
+    const { title, description, boardId, sectionId } = req.body;
+
+    const issue = await prisma.issue.create({
+        data : {
+            title,
+            description,
+            boardId,
+            sectionId
+        }
+    });
+
+    res.json(issue);
+});
+
+app.get("/issues", authMiddleware, async (req: any, res: any) => {
+
+    const { boardId } = req.query;
+
+    const issues = await prisma.issue.findMany({
+        where : {
+            boardId : boardId as string
+        }
+    });
+
+    res.json(issues);
+});
+
+app.get("/issue/:issueId", authMiddleware, async (req: any, res: any) => {
+
+    const { issueId } = req.params;
+
+    const issue = await prisma.issue.findFirst({
+        where : {
+            id : issueId
+        },
+        include : {
+            comments : true
+        }
+    });
+
+    res.json(issue);
+});
+
+app.put("/issue", authMiddleware, async (req: any, res: any) => {
+
+    const { issueId, title, description } = req.body;
+
+    const issue = await prisma.issue.update({
+        where : {
+            id : issueId
+        },
+        data : {
+            title,
+            description
+        }
+    });
+
+    res.json(issue);
+});
+
+app.put("/issue/move", authMiddleware, async (req: any, res: any) => {
+
+    const { issueId, sectionId } = req.body;
+
+    const issue = await prisma.issue.update({
+        where : {
+            id : issueId
+        },
+        data : {
+            sectionId
+        }
+    });
+
+    res.json(issue);
+});
+
+app.delete("/issue/:issueId", authMiddleware, async (req: any, res: any) => {
+
+    const { issueId } = req.params;
+
+    await prisma.issue.delete({
+        where : {
+            id : issueId
+        }
+    });
+
+    res.json({
+        message : "issue deleted"
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Backend running on http://localhost:${PORT}`);
 });
