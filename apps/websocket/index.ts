@@ -1,4 +1,5 @@
 import { WebSocket, WebSocketServer } from "ws";
+import { prisma } from "db/client";
 
 interface CustomWebSocket extends WebSocket {
     roomId?: string;
@@ -20,7 +21,7 @@ server.on("connection", (ws) => {
     const socket = ws as CustomWebSocket;
     let joinedRoom = null;
 
-    socket.on("message", (data) => {
+    socket.on("message", async (data) => {
         const parsedData = JSON.parse(data.toString());
 
         if (parsedData.type === "join") {
@@ -52,12 +53,22 @@ server.on("connection", (ws) => {
                 socket: socket,
             });
 
+            const board = await prisma.section.findMany({
+                where : {
+                    boardId
+                },
+                include : {
+                    issues : true
+                }
+            });
+
             socket.send(
                 JSON.stringify({
                     type: "initial_state",
                     users: boardUsers
                         .filter((x) => x.userId !== newUserId)
                         .map((u) => u.userId),
+                    board
                 })
             );
         }
