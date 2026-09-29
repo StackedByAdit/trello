@@ -9,14 +9,19 @@
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "lucide-react": "^1.48.0",
     "react": "^19",
     "react-dom": "^19",
-    "react-router": "^8.3.0",
-    "db":"*"
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/bun": "latest"
+    "bun-plugin-tailwind": "^0.1.2",
+    "tailwindcss": "^4.3.3"
   }
 }
