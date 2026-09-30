@@ -129,3 +129,60 @@ export async function signin(body: SigninInput): Promise<AuthResponse> {
   });
 }
 
+// ==========================================
+// Organization & Membership Routes
+// ==========================================
+
+export async function getOrganizations(): Promise<Organization[]> {
+  return apiFetch<Organization[]>("/organizations", {
+    method: "GET",
+  });
+}
+
+export async function createOrganization(
+  body: CreateOrganizationInput
+): Promise<Organization> {
+  return apiFetch<Organization>("/organization", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteOrganization(
+  bodyOrOrgId: DeleteOrganizationInput | string
+): Promise<MessageResponse> {
+  const body =
+    typeof bodyOrOrgId === "string" ? { orgId: bodyOrOrgId } : bodyOrOrgId;
+  return apiFetch<MessageResponse>("/organization", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function invite(body: InviteInput): Promise<MessageResponse> {
+  return apiFetch<MessageResponse>("/invite", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function accept(
+  bodyOrOrgId: AcceptInput | string
+): Promise<MessageResponse> {
+  const body =
+    typeof bodyOrOrgId === "string" ? { orgId: bodyOrOrgId } : bodyOrOrgId;
+  return apiFetch<MessageResponse>("/accept", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function removeMember(
+  body: RemoveMemberInput
+): Promise<MessageResponse> {
+  return apiFetch<MessageResponse>("/membership", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
