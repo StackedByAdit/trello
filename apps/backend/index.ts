@@ -1,5 +1,6 @@
 import { prisma } from "db/client";
 import express from "express";
+import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authMiddleware } from "./middleware";
@@ -9,6 +10,16 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+
+const allowedOrigins = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.split(",").map((o: string) => o.trim())
+    : ["http://localhost:3000", "http://localhost:5173"];
+
+app.use(cors({
+    origin : allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+    allowedHeaders : ["Content-Type", "Authorization"],
+    credentials : true
+}));
 
 app.use(express.json());
 
