@@ -186,3 +186,81 @@ export async function removeMember(
   });
 }
 
+// ==========================================
+// Board Routes
+// ==========================================
+
+export async function getBoards(orgId: string): Promise<Board[]> {
+  return apiFetch<Board[]>(`/boards?orgId=${encodeURIComponent(orgId)}`, {
+    method: "GET",
+  });
+}
+
+export async function createBoard(body: CreateBoardInput): Promise<Board> {
+  return apiFetch<Board>("/board", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateBoard(body: UpdateBoardInput): Promise<Board> {
+  return apiFetch<Board>("/board", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteBoard(
+  bodyOrBoardId: DeleteBoardInput | string
+): Promise<MessageResponse> {
+  const body =
+    typeof bodyOrBoardId === "string"
+      ? { boardId: bodyOrBoardId }
+      : bodyOrBoardId;
+  return apiFetch<MessageResponse>("/board", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
+// ==========================================
+// Section Routes
+// ==========================================
+
+export async function getSections(boardId: string): Promise<Section[]> {
+  return apiFetch<Section[]>(`/sections?boardId=${encodeURIComponent(boardId)}`, {
+    method: "GET",
+  });
+}
+
+export async function createSection(
+  body: CreateSectionInput
+): Promise<Section> {
+  return apiFetch<Section>("/section", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateSection(
+  body: UpdateSectionInput
+): Promise<Section> {
+  return apiFetch<Section>("/section", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteSection(
+  bodyOrSectionId: DeleteSectionInput | string
+): Promise<MessageResponse> {
+  const body =
+    typeof bodyOrSectionId === "string"
+      ? { sectionId: bodyOrSectionId }
+      : bodyOrSectionId;
+  return apiFetch<MessageResponse>("/section", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
