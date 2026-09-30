@@ -108,3 +108,24 @@ async function apiFetch<T>(
 
   return data as T;
 }
+
+// ==========================================
+// Authentication Routes
+// ==========================================
+
+export async function signup(body: SignupInput): Promise<MessageResponse> {
+  return apiFetch<MessageResponse>("/signup", {
+    method: "POST",
+    body: JSON.stringify(body),
+    requiresAuth: false,
+  });
+}
+
+export async function signin(body: SigninInput): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/signin", {
+    method: "POST",
+    body: JSON.stringify(body),
+    requiresAuth: false,
+  });
+}
+
