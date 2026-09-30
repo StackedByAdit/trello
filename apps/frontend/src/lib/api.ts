@@ -264,3 +264,110 @@ export async function deleteSection(
   });
 }
 
+// ==========================================
+// Issue Routes
+// ==========================================
+
+export async function getIssues(boardId: string): Promise<Issue[]> {
+  return apiFetch<Issue[]>(`/issues?boardId=${encodeURIComponent(boardId)}`, {
+    method: "GET",
+  });
+}
+
+export async function getIssue(issueId: string): Promise<IssueWithComments> {
+  return apiFetch<IssueWithComments>(`/issue/${encodeURIComponent(issueId)}`, {
+    method: "GET",
+  });
+}
+
+export async function createIssue(body: CreateIssueInput): Promise<Issue> {
+  return apiFetch<Issue>("/issue", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateIssue(body: UpdateIssueInput): Promise<Issue> {
+  return apiFetch<Issue>("/issue", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function moveIssue(body: MoveIssueInput): Promise<Issue> {
+  return apiFetch<Issue>("/issue/move", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteIssue(issueId: string): Promise<MessageResponse> {
+  return apiFetch<MessageResponse>(`/issue/${encodeURIComponent(issueId)}`, {
+    method: "DELETE",
+  });
+}
+
+// ==========================================
+// Comment Routes
+// ==========================================
+
+export async function createComment(
+  body: CreateCommentInput
+): Promise<Comment> {
+  return apiFetch<Comment>("/comment", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateComment(
+  body: UpdateCommentInput
+): Promise<Comment> {
+  return apiFetch<Comment>("/comment", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteComment(
+  bodyOrCommentId: DeleteCommentInput | string
+): Promise<MessageResponse> {
+  const body =
+    typeof bodyOrCommentId === "string"
+      ? { commentId: bodyOrCommentId }
+      : bodyOrCommentId;
+  return apiFetch<MessageResponse>("/comment", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
+}
+
+export const api = {
+  signup,
+  signin,
+  getOrganizations,
+  createOrganization,
+  deleteOrganization,
+  invite,
+  accept,
+  removeMember,
+  getBoards,
+  createBoard,
+  updateBoard,
+  deleteBoard,
+  getSections,
+  createSection,
+  updateSection,
+  deleteSection,
+  getIssues,
+  getIssue,
+  createIssue,
+  updateIssue,
+  moveIssue,
+  deleteIssue,
+  createComment,
+  updateComment,
+  deleteComment,
+};
+
+export default api;
