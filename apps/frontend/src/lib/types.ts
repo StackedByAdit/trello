@@ -82,3 +82,118 @@ export interface Comment {
   user?: User;
 }
 
+/**
+ * Endpoint Response & Composite Types
+ */
+export interface IssueWithComments extends Issue {
+  board: Board;
+  comments: Comment[];
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface AuthResponse {
+  token: string;
+}
+
+export interface SignupResponse {
+  message: string;
+}
+
+// Request Payload Types
+export interface SignupInput {
+  email: string;
+  password: string;
+}
+
+export interface SigninInput {
+  email: string;
+  password: string;
+}
+
+export interface CreateOrganizationInput {
+  name: string;
+  description?: string;
+}
+
+export interface DeleteOrganizationInput {
+  orgId: string;
+}
+
+export interface InviteInput {
+  email: string;
+  orgId: string;
+}
+
+export interface AcceptInput {
+  orgId: string;
+}
+
+export interface RemoveMemberInput {
+  userId: string;
+  orgId: string;
+}
+
+export interface CreateBoardInput {
+  title: string;
+  organizationId: string;
+}
+
+export interface UpdateBoardInput {
+  boardId: string;
+  title: string;
+}
+
+export interface DeleteBoardInput {
+  boardId: string;
+}
+
+export interface CreateSectionInput {
+  title: string;
+  boardId: string;
+  order: number;
+}
+
+export interface UpdateSectionInput {
+  sectionId: string;
+  title?: string;
+  order?: number;
+}
+
+export interface DeleteSectionInput {
+  sectionId: string;
+}
+
+export interface CreateIssueInput {
+  title: string;
+  description?: string;
+  boardId: string;
+  sectionId: string;
+}
+
+export interface UpdateIssueInput {
+  issueId: string;
+  title?: string;
+  description?: string;
+}
+
+export interface MoveIssueInput {
+  issueId: string;
+  sectionId: string;
+}
+
+export interface CreateCommentInput {
+  text: string;
+  issueId: string;
+}
+
+export interface UpdateCommentInput {
+  commentId: string;
+  text: string;
+}
+
+export interface DeleteCommentInput {
+  commentId: string;
+}
