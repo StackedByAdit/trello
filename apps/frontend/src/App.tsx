@@ -7,27 +7,31 @@ import { AppShell } from "./components/layout/AppShell";
 import { Kanban, Sparkles } from "lucide-react";
 import { Badge } from "./components/ui/Badge";
 
+import { AuthProvider } from "./auth";
+
 export function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<AppShell />}>
-              <Route path="/" element={<HomePlaceholder />} />
-              <Route path="/board/:boardId" element={<Board />} />
-              <Route
-                path="/members"
-                element={<SimplePlaceholder title="Workspace Members" />}
-              />
-              <Route
-                path="/settings"
-                element={<SimplePlaceholder title="Organization Settings" />}
-              />
-              <Route path="*" element={<HomePlaceholder />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route path="/" element={<HomePlaceholder />} />
+                <Route path="/board/:boardId" element={<Board />} />
+                <Route
+                  path="/members"
+                  element={<SimplePlaceholder title="Workspace Members" />}
+                />
+                <Route
+                  path="/settings"
+                  element={<SimplePlaceholder title="Organization Settings" />}
+                />
+                <Route path="*" element={<HomePlaceholder />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </ToastProvider>
     </ThemeProvider>
   );
