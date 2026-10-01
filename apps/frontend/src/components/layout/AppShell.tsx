@@ -21,6 +21,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../auth";
 import { Button } from "../ui/Button";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
@@ -33,6 +34,7 @@ export interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme, actualTheme, toggleTheme } = useTheme();
+  const { logout } = useAuth();
 
   // Close mobile sidebar on Escape key
   useEffect(() => {
@@ -136,7 +138,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       label: "Sign Out",
       destructive: true,
       icon: <LogOut className="w-4 h-4" />,
-      onClick: () => {},
+      onClick: () => logout(),
     },
   ];
 
