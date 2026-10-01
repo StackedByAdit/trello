@@ -13,8 +13,8 @@ interface AuthContextType {
   userId: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signin: (credentials: SigninInput) => Promise<void>;
-  signup: (credentials: SignupInput) => Promise<void>;
+  signin: (credentials: SigninInput) => Promise<string>;
+  signup: (credentials: SignupInput) => Promise<string>;
   logout: () => void;
 }
 
@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [logout]);
 
-  const signin = async (credentials: SigninInput) => {
+  const signin = async (credentials: SigninInput): Promise<string> => {
     setIsLoading(true);
     try {
       const response = await apiSignin(credentials);
@@ -90,12 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setToken(receivedToken);
       setUserId(parseJwtUserId(receivedToken));
+      return receivedToken;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (credentials: SignupInput) => {
+  const signup = async (credentials: SignupInput): Promise<string> => {
     setIsLoading(true);
     try {
       await apiSignup(credentials);
@@ -108,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setToken(receivedToken);
       setUserId(parseJwtUserId(receivedToken));
+      return receivedToken;
     } finally {
       setIsLoading(false);
     }

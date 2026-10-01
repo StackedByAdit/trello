@@ -7,7 +7,8 @@ import { AppShell } from "./components/layout/AppShell";
 import { Kanban, Sparkles } from "lucide-react";
 import { Badge } from "./components/ui/Badge";
 
-import { AuthProvider } from "./auth";
+import { AuthProvider, ProtectedRoute } from "./auth";
+import { SignInPage, SignUpPage, OnboardingPage } from "./pages";
 
 export function App() {
   return (
@@ -16,8 +17,30 @@ export function App() {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              <Route element={<AppShell />}>
+              {/* Public Authentication Routes */}
+              <Route path="/signin" element={<SignInPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+
+              {/* Protected Onboarding Route */}
+              <Route
+                path="/onboarding"
+                element={
+                  <ProtectedRoute>
+                    <OnboardingPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Workspace Layout & Routes */}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppShell />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/" element={<HomePlaceholder />} />
+                <Route path="/dashboard" element={<HomePlaceholder />} />
                 <Route path="/board/:boardId" element={<Board />} />
                 <Route
                   path="/members"
