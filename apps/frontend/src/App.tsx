@@ -11,6 +11,7 @@ import {
   SignUpPage,
   OnboardingPage,
   DashboardPage,
+  BoardPage,
 } from "./pages";
 
 export function App() {
@@ -45,7 +46,7 @@ export function App() {
                 >
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/board/:boardId" element={<SimplePlaceholder title="Board View" />} />
+                  <Route path="/board/:boardId" element={<BoardPage />} />
                   <Route
                     path="/members"
                     element={<SimplePlaceholder title="Workspace Members" />}
