@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, NavLink } from "react-router";
+import { Outlet, NavLink, useNavigate } from "react-router";
 import {
   Kanban,
   Building2,
@@ -23,11 +23,29 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../auth";
 import { useWorkspace } from "../../context/WorkspaceContext";
-import { useNavigate } from "react-router";
 import { Button } from "../ui/Button";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
-import { Dropdown } from "../ui/Dropdown";
+import { Dropdown, type DropdownItem } from "../ui/Dropdown";
+
+const BOARD_ACCENT_COLORS = [
+  "#0D9488",
+  "#14B8A6",
+  "#EA580C",
+  "#3B82F6",
+  "#8B5CF6",
+  "#EC4899",
+  "#10B981",
+  "#F59E0B",
+];
+
+function getBoardColor(boardId: string): string {
+  let hash = 0;
+  for (let i = 0; i < boardId.length; i++) {
+    hash = boardId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return BOARD_ACCENT_COLORS[Math.abs(hash) % BOARD_ACCENT_COLORS.length]!;
+}
 
 export interface AppShellProps {
   children?: React.ReactNode;
@@ -38,7 +56,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { theme, actualTheme, toggleTheme } = useTheme();
   const { logout, userId } = useAuth();
   const navigate = useNavigate();
-  const { organizations, activeOrg, setActiveOrg } = useWorkspace();
+
+  const {
+    organizations,
+    activeOrg,
+    setActiveOrg,
+    boards,
+    isLoadingBoards,
+    openCreateBoardModal,
+  } = useWorkspace();
 
   // Close mobile sidebar on Escape key
   useEffect(() => {
@@ -63,61 +89,47 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     };
   }, [isSidebarOpen]);
 
-  interface Organization {
-    id: string;
-    name: string;
-    role: string;
-  }
-
-  // Mock organizations for org switcher
-  const organizations: Organization[] = [
-    { id: "org-1", name: "Engineering Team", role: "Admin" },
-    { id: "org-2", name: "Product & Design", role: "Member" },
-    { id: "org-3", name: "Marketing HQ", role: "Member" },
-  ];
-  const [activeOrg, setActiveOrg] = useState<Organization>(organizations[0]!);
-
-  // Mock boards for sidebar boards list
-  const boards = [
-    { id: "1", title: "Product Roadmap", color: "#0D9488" },
-    { id: "2", title: "Sprint 42 - Backend", color: "#EA580C" },
-    { id: "3", title: "Design System Revamp", color: "#6366F1" },
-    { id: "4", title: "Customer Bug Tracker", color: "#EC4899" },
-  ];
-
-  const orgDropdownItems = [
+  const orgDropdownItems: DropdownItem[] = [
     ...organizations.map((org) => ({
       id: org.id,
       label: (
         <div className="flex items-center justify-between w-full">
-          <span>{org.name}</span>
-          {activeOrg.id === org.id && (
-            <Check className="w-4 h-4 text-[var(--color-primary)]" />
+          <span className="truncate">{org.name}</span>
+          {activeOrg?.id === org.id && (
+            <Check className="w-4 h-4 text-[var(--color-primary)] ml-2 shrink-0" />
           )}
         </div>
       ),
-      icon: <Building2 className="w-4 h-4 text-[var(--color-muted-foreground)]" />,
-      onClick: () => { setActiveOrg(org); setIsSidebarOpen(false); },
+      icon: (
+        <Building2 className="w-4 h-4 text-[var(--color-muted-foreground)]" />
+      ),
+      onClick: () => {
+        setActiveOrg(org);
+        setIsSidebarOpen(false);
+      },
     })),
     { divider: true, label: "" },
     {
       id: "new-org",
       label: "Create Organization",
       icon: <Plus className="w-4 h-4 text-[var(--color-primary)]" />,
-      onClick: () => { setIsSidebarOpen(false); navigate("/onboarding"); },
+      onClick: () => {
+        setIsSidebarOpen(false);
+        navigate("/onboarding");
+      },
     },
   ];
 
-  const userDropdownItems = [
+  const userDropdownItems: DropdownItem[] = [
     {
       id: "profile",
       label: (
         <div className="flex flex-col">
           <span className="font-semibold text-xs text-[var(--color-foreground)]">
-            Alex Johnson
+            Account User
           </span>
-          <span className="text-[11px] text-[var(--color-muted-foreground)]">
-            alex.j@example.com
+          <span className="text-[11px] text-[var(--color-muted-foreground)] truncate max-w-[150px]">
+            {userId ? `ID: ${userId.slice(0, 8)}...` : "Logged in"}
           </span>
         </div>
       ),
@@ -125,16 +137,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     },
     { divider: true, label: "" },
     {
-      id: "user-profile",
-      label: "Profile Settings",
-      icon: <UserIcon className="w-4 h-4" />,
-      onClick: () => {},
+      id: "all-boards",
+      label: "Dashboard",
+      icon: <LayoutDashboard className="w-4 h-4" />,
+      onClick: () => navigate("/dashboard"),
     },
     {
-      id: "user-settings",
-      label: "Account Preferences",
-      icon: <Settings className="w-4 h-4" />,
-      onClick: () => {},
+      id: "create-org",
+      label: "Create Workspace",
+      icon: <Plus className="w-4 h-4" />,
+      onClick: () => navigate("/onboarding"),
     },
     { divider: true, label: "" },
     {
@@ -164,7 +176,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] font-sans antialiased selection:bg-[var(--color-primary)] selection:text-white">
       {/* ================= TOP NAVIGATION BAR ================= */}
       <header className="sticky top-0 z-30 h-14 w-full bg-[var(--color-card)] border-b border-[var(--color-border)] px-3 sm:px-4 flex items-center justify-between gap-2 shadow-[var(--shadow-sm)]">
-        {/* Left Side: Mobile Menu Button + Brand Logo */}
+        {/* Left Side: Mobile Menu Button + Brand Logo + Top Bar Org Switcher */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile hamburger toggle button */}
           <Button
@@ -178,16 +190,46 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </Button>
 
           {/* Logo & Brand Name */}
-          <div className="flex items-center gap-2 select-none">
+          <NavLink
+            to="/dashboard"
+            className="flex items-center gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] rounded-[var(--radius-sm)]"
+          >
             <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white flex items-center justify-center shadow-[var(--shadow-sm)]">
               <Kanban className="w-4 h-4" aria-hidden="true" />
             </div>
             <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)]">
               Trello
             </span>
-            <Badge variant="accent" size="sm" className="hidden sm:inline-flex ml-1">
+            <Badge
+              variant="accent"
+              size="sm"
+              className="hidden sm:inline-flex ml-1"
+            >
               Pro
             </Badge>
+          </NavLink>
+
+          {/* Org Switcher Dropdown in the Top Bar */}
+          <div className="hidden sm:flex items-center ml-2 pl-2 sm:pl-3 border-l border-[var(--color-border)]">
+            <Dropdown
+              align="left"
+              items={orgDropdownItems}
+              trigger={({ isOpen }) => (
+                <button
+                  type="button"
+                  aria-label="Switch active organization"
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] hover:bg-[var(--color-muted)] transition-colors duration-150 cursor-pointer text-left text-xs font-semibold max-w-[210px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] ${
+                    isOpen ? "ring-2 ring-[var(--color-ring)]/40" : ""
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
+                  <span className="truncate flex-1">
+                    {activeOrg ? activeOrg.name : "Select Workspace"}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[var(--color-muted-foreground)] shrink-0 ml-1" />
+                </button>
+              )}
+            />
           </div>
         </div>
 
@@ -243,11 +285,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   isOpen ? "bg-[var(--color-muted)]" : ""
                 }`}
               >
-                <Avatar
-                  name="Alex Johnson"
-                  size="sm"
-                  status="online"
-                />
+                <Avatar name="User" size="sm" status="online" />
                 <ChevronDown className="w-3.5 h-3.5 text-[var(--color-muted-foreground)] hidden sm:block mr-0.5" />
               </button>
             )}
@@ -289,7 +327,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </Button>
           </div>
 
-          {/* Org Switcher Header */}
+          {/* Org Switcher Header in Sidebar */}
           <div className="p-3 border-b border-[var(--color-border)]">
             <Dropdown
               align="left"
@@ -309,10 +347,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold truncate text-[var(--color-foreground)]">
-                        {activeOrg.name}
+                        {activeOrg ? activeOrg.name : "No Workspace"}
                       </div>
                       <div className="text-[10px] text-[var(--color-muted-foreground)] font-medium">
-                        {activeOrg.role}
+                        {activeOrg ? "Active Workspace" : "Select workspace"}
                       </div>
                     </div>
                   </div>
@@ -327,7 +365,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {/* Primary Section */}
             <div className="space-y-1">
               <NavLink
-                to="/"
+                to="/dashboard"
                 onClick={() => setIsSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] ${
@@ -381,37 +419,59 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={openCreateBoardModal}
                   aria-label="Create new board"
                   title="Create new board"
-                  className="w-6 h-6 p-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                  className="w-6 h-6 p-0 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </Button>
               </div>
 
-              <div className="space-y-0.5">
-                {boards.map((board) => (
-                  <NavLink
-                    key={board.id}
-                    to={`/board/${board.id}`}
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 px-3 py-2 text-sm rounded-[var(--radius-md)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] ${
-                        isActive
-                          ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-semibold"
-                          : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-                      }`
-                    }
+              {isLoadingBoards ? (
+                <div className="space-y-1.5 px-2 py-1">
+                  <div className="h-6 w-full bg-[var(--color-muted)] rounded-[var(--radius-sm)] animate-pulse" />
+                  <div className="h-6 w-3/4 bg-[var(--color-muted)] rounded-[var(--radius-sm)] animate-pulse" />
+                </div>
+              ) : boards.length === 0 ? (
+                <div className="px-3 py-2.5 text-xs text-[var(--color-muted-foreground)] bg-[var(--color-muted)]/30 rounded-[var(--radius-md)]">
+                  <p>No boards created yet.</p>
+                  <button
+                    type="button"
+                    onClick={openCreateBoardModal}
+                    className="mt-1 text-[var(--color-primary)] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                   >
-                    <span
-                      className="w-2.5 h-2.5 rounded-sm shrink-0"
-                      style={{ backgroundColor: board.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate flex-1">{board.title}</span>
-                  </NavLink>
-                ))}
-              </div>
+                    <Plus className="w-3 h-3" /> Create a board
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {boards.map((board) => {
+                    const boardColor = getBoardColor(board.id);
+                    return (
+                      <NavLink
+                        key={board.id}
+                        to={`/board/${board.id}`}
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-3 py-2 text-sm rounded-[var(--radius-md)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] ${
+                            isActive
+                              ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-semibold"
+                              : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+                          }`
+                        }
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm shrink-0"
+                          style={{ backgroundColor: boardColor }}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate flex-1">{board.title}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -421,7 +481,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               <FolderKanban className="w-3.5 h-3.5 text-[var(--color-primary)]" />
               <span>Workspace Sync</span>
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Online" />
+            <span
+              className="w-2 h-2 rounded-full bg-emerald-500"
+              title="Online"
+            />
           </div>
         </aside>
 
