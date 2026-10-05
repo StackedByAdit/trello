@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../auth";
+import { useWorkspace } from "../../context/WorkspaceContext";
+import { useNavigate } from "react-router";
 import { Button } from "../ui/Button";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
@@ -34,7 +36,9 @@ export interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme, actualTheme, toggleTheme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, userId } = useAuth();
+  const navigate = useNavigate();
+  const { organizations, activeOrg, setActiveOrg } = useWorkspace();
 
   // Close mobile sidebar on Escape key
   useEffect(() => {
@@ -93,14 +97,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </div>
       ),
       icon: <Building2 className="w-4 h-4 text-[var(--color-muted-foreground)]" />,
-      onClick: () => setActiveOrg(org),
+      onClick: () => { setActiveOrg(org); setIsSidebarOpen(false); },
     })),
     { divider: true, label: "" },
     {
       id: "new-org",
       label: "Create Organization",
       icon: <Plus className="w-4 h-4 text-[var(--color-primary)]" />,
-      onClick: () => {},
+      onClick: () => { setIsSidebarOpen(false); navigate("/onboarding"); },
     },
   ];
 
