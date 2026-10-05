@@ -289,6 +289,103 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* 4. GRID OF BOARD CARDS */}
+      {!isLoading && !boardsError && boards.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+              Workspace Boards ({boards.length})
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {boards.map((board) => {
+              const accentColor = getBoardColor(board.id);
+
+              const cardMenuItems: DropdownItem[] = [
+                {
+                  id: "rename",
+                  label: "Rename Board",
+                  icon: <Edit2 className="w-4 h-4" />,
+                  onClick: () => handleOpenRename(board),
+                },
+                {
+                  id: "delete",
+                  label: "Delete Board",
+                  icon: <Trash2 className="w-4 h-4" />,
+                  destructive: true,
+                  onClick: () => setDeleteTarget(board),
+                },
+              ];
+
+              return (
+                <div
+                  key={board.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/board/${board.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/board/${board.id}`);
+                    }
+                  }}
+                  className="group relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4 sm:p-5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[140px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] select-none"
+                  aria-label={`Open board: ${board.title}`}
+                >
+                  {/* Top Bar: Accent color chip + Dropdown Menu */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className="w-8 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: accentColor }}
+                      aria-hidden="true"
+                    />
+
+                    {/* Context Menu Button */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <Dropdown
+                        align="right"
+                        items={cardMenuItems}
+                        trigger={({ isOpen }) => (
+                          <button
+                            type="button"
+                            aria-label={`Options for ${board.title}`}
+                            className={`p-1 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
+                              isOpen ? "bg-[var(--color-muted)] text-[var(--color-foreground)]" : ""
+                            }`}
+                          >
+                            <MoreVertical className="w-4 h-4" aria-hidden="true" />
+                          </button>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Board Title */}
+                  <div className="my-2">
+                    <h3 className="font-bold text-base text-[var(--color-foreground)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-2 leading-snug">
+                      {board.title}
+                    </h3>
+                  </div>
+
+                  {/* Bottom Row: Created Date + Hover Arrow */}
+                  <div className="pt-2 border-t border-[var(--color-border)]/50 flex items-center justify-between text-xs text-[var(--color-muted-foreground)]">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      <span>{formatDate(board.createdAt)}</span>
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-[var(--color-primary)] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
           </div>
   );
 };
