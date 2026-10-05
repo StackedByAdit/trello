@@ -745,9 +745,114 @@ export const BoardPage: React.FC = () => {
   };
 
   // Drag and drop event handlers
-  const handleDragStart = () => {};
-  const handleDragOver = () => {};
-  const handleDragEnd = () => {};
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const issue = issues.find((i) => i.id === active.id);
+    if (issue) {
+      setActiveDragIssue(issue);
+      dragSourceSectionId.current = issue.sectionId;
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    const activeIssue = issues.find((i) => i.id === activeId);
+    if (!activeIssue) return;
+
+    // Determine target section
+    let targetSectionId: string | null = null;
+    const overData = over.data.current;
+
+    if (overData?.type === "Section") {
+      targetSectionId = overData.section.id;
+    } else if (overData?.type === "Issue") {
+      targetSectionId = overData.sectionId;
+    } else {
+      // Check if overId directly matches a section
+      const sectionMatch = sections.find((s) => s.id === overId);
+      if (sectionMatch) targetSectionId = sectionMatch.id;
+    }
+
+    if (!targetSectionId || activeIssue.sectionId === targetSectionId) return;
+
+    // Optimistically reassign to new column during hover
+    setIssues((prev) =>
+      prev.map((i) => (i.id === activeId ? { ...i, sectionId: targetSectionId! } : i))
+    );
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    const activeId = String(active.id);
+
+    setActiveDragIssue(null);
+
+    if (!over) {
+      // If dropped outside, revert to source section
+      if (dragSourceSectionId.current) {
+        setIssues((prev) =>
+          prev.map((i) =>
+            i.id === activeId ? { ...i, sectionId: dragSourceSectionId.current! } : i
+          )
+        );
+      }
+      return;
+    }
+
+    const overId = String(over.id);
+    const sourceSection = dragSourceSectionId.current;
+
+    let targetSectionId: string | null = null;
+    const overData = over.data.current;
+
+    if (overData?.type === "Section") {
+      targetSectionId = overData.section.id;
+    } else if (overData?.type === "Issue") {
+      targetSectionId = overData.sectionId;
+    } else {
+      const sectionMatch = sections.find((s) => s.id === overId);
+      if (sectionMatch) targetSectionId = sectionMatch.id;
+    }
+
+    if (!targetSectionId) return;
+
+    // Moving between columns
+    if (sourceSection && sourceSection !== targetSectionId) {
+      const snapshot = [...issues];
+      try {
+        await moveIssue({
+          issueId: activeId,
+          sectionId: targetSectionId,
+        });
+        toast({
+          title: "Card moved",
+          description: "Issue position synced.",
+          variant: "success",
+          duration: 2000,
+        });
+      } catch (err: any) {
+        // Roll back on failure to prevent optimistic bugs
+        setIssues(snapshot);
+        toast({
+          title: "Could not move card",
+          description: err?.message || "Failed to move issue",
+          variant: "error",
+        });
+      }
+    } else {
+      // Reordering within the same column
+      const oldIndex = issues.findIndex((i) => i.id === activeId);
+      const newIndex = issues.findIndex((i) => i.id === overId);
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        setIssues((items) => arrayMove(items, oldIndex, newIndex));
+      }
+    }
+  };
 
   const boardTitle = currentBoard?.title || `Board #${boardId?.slice(0, 6)}`;
 
