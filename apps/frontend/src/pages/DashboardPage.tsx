@@ -386,6 +386,63 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* ================= MODAL 1: CREATE BOARD ================= */}
+      <Modal
+        isOpen={isCreateBoardModalOpen}
+        onClose={closeCreateBoardModal}
+        title="Create New Board"
+        description={
+          activeOrg
+            ? `Add a new Kanban board to ${activeOrg.name}.`
+            : "Add a new Kanban board."
+        }
+        maxWidth="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={closeCreateBoardModal}
+              disabled={isCreating}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="create-board-form"
+              variant="primary"
+              size="md"
+              isLoading={isCreating}
+              disabled={isCreating || !newBoardTitle.trim()}
+              className="cursor-pointer font-semibold shadow-[var(--shadow-sm)]"
+            >
+              Create Board
+            </Button>
+          </>
+        }
+      >
+        <form id="create-board-form" onSubmit={handleCreateSubmit} noValidate>
+          <Input
+            id="new-board-title"
+            name="title"
+            label="Board Title"
+            placeholder="e.g. Sprint Backlog, Product Launch, or QA"
+            value={newBoardTitle}
+            onChange={(e) => {
+              setNewBoardTitle(e.target.value);
+              if (createError) setCreateError(null);
+            }}
+            error={createError || undefined}
+            autoFocus
+            required
+            disabled={isCreating}
+            leftIcon={<Kanban className="w-4 h-4" aria-hidden="true" />}
+          />
+        </form>
+      </Modal>
+
           </div>
   );
 };
