@@ -443,7 +443,110 @@ export const DashboardPage: React.FC = () => {
         </form>
       </Modal>
 
+      {/* ================= MODAL 2: RENAME BOARD ================= */}
+      <Modal
+        isOpen={renameTarget !== null}
+        onClose={() => setRenameTarget(null)}
+        title="Rename Board"
+        description="Update the title for this board."
+        maxWidth="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => setRenameTarget(null)}
+              disabled={isRenaming}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="rename-board-form"
+              variant="primary"
+              size="md"
+              isLoading={isRenaming}
+              disabled={isRenaming || !renameTitle.trim()}
+              className="cursor-pointer font-semibold shadow-[var(--shadow-sm)]"
+            >
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        <form id="rename-board-form" onSubmit={handleRenameSubmit} noValidate>
+          <Input
+            id="rename-board-title"
+            name="title"
+            label="Board Title"
+            value={renameTitle}
+            onChange={(e) => {
+              setRenameTitle(e.target.value);
+              if (renameError) setRenameError(null);
+            }}
+            error={renameError || undefined}
+            autoFocus
+            required
+            disabled={isRenaming}
+            leftIcon={<Kanban className="w-4 h-4" aria-hidden="true" />}
+          />
+        </form>
+      </Modal>
+
+      {/* ================= MODAL 3: DELETE BOARD CONFIRMATION ================= */}
+      <Modal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Board"
+        maxWidth="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="md"
+              onClick={handleDeleteSubmit}
+              isLoading={isDeleting}
+              disabled={isDeleting}
+              className="cursor-pointer font-semibold"
+            >
+              Delete Board
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--color-foreground)]">
+            Are you sure you want to delete{" "}
+            <span className="font-bold text-[var(--color-destructive)]">
+              "{deleteTarget?.title}"
+            </span>
+            ?
+          </p>
+          <div className="p-3.5 rounded-[var(--radius-md)] bg-[var(--color-destructive)]/10 border border-[var(--color-destructive)]/20 text-xs text-[var(--color-destructive)] space-y-1">
+            <div className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Warning: This action cannot be undone.</span>
+            </div>
+            <p className="text-[var(--color-foreground)]/80">
+              All columns, issues, task descriptions, and comments within this board will be permanently removed.
+            </p>
           </div>
+        </div>
+      </Modal>
+    </div>
   );
 };
 
