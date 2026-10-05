@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Building2, Sparkles, ArrowRight, LogOut } from "lucide-react";
 import { useAuth } from "../auth";
-import { createOrganization } from "../lib/api";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
@@ -15,6 +15,7 @@ import {
 export const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { createOrg } = useWorkspace();
   const { toast } = useToast();
 
   const [orgName, setOrgName] = useState("");
@@ -54,15 +55,9 @@ export const OnboardingPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await createOrganization({
+      await createOrg({
         name: trimmedName,
         description: description.trim() || undefined,
-      });
-
-      toast({
-        title: "Workspace created!",
-        description: `Welcome to ${trimmedName}. Let's build something great.`,
-        variant: "success",
       });
 
       navigate("/dashboard", { replace: true });
