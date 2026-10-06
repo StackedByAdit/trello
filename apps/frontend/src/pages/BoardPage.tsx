@@ -473,6 +473,12 @@ export const BoardPage: React.FC = () => {
     [boardId, navigate]
   );
 
+  const handleIssueUpdated = useCallback((updated: Issue | IssueWithComments) => {
+    setIssues((prev) =>
+      prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+    );
+  }, []);
+
   // Sections & Issues State
   const [sections, setSections] = useState<Section[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -1179,6 +1185,7 @@ export const BoardPage: React.FC = () => {
           sections={sections}
           initialIssue={issues.find((i) => i.id === issueId)}
           onClose={handleCloseDrawer}
+          onIssueUpdated={handleIssueUpdated}
         />
       )}
     </div>

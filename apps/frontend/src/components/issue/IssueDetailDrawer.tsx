@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { X, Kanban, AlertCircle } from "lucide-react";
-import { getIssue } from "../../lib/api";
+import { getIssue, updateIssue } from "../../lib/api";
 import type { IssueWithComments, Section, Issue } from "../../lib/types";
 import { useWorkspace } from "../../context/WorkspaceContext";
+import { useToast } from "../ui/Toast";
 import { Button } from "../ui/Button";
 
 interface IssueDetailDrawerProps {
@@ -27,6 +28,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   onIssueDeleted,
 }) => {
   const { activeOrg } = useWorkspace();
+  const { toast } = useToast();
 
   const [issue, setIssue] = useState<IssueWithComments | null>(
     initialIssue ? (initialIssue as IssueWithComments) : null
@@ -34,6 +36,18 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(!initialIssue);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Title inline editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(initialIssue?.title || "");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const isTitleEscapePressedRef = useRef(false);
+
+  // Description inline editing state
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState(initialIssue?.description || "");
+  const descInputRef = useRef<HTMLTextAreaElement>(null);
+  const isDescEscapePressedRef = useRef(false);
 
   // Fetch issue details
   const fetchIssueDetail = useCallback(async () => {
@@ -48,6 +62,8 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     try {
       const data = await getIssue(issueId);
       setIssue(data);
+      setTitleValue(data.title);
+      setDescValue(data.description || "");
     } catch (err: any) {
       if (err?.status === 404) {
         setIsNotFound(true);
@@ -65,12 +81,33 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     fetchIssueDetail();
   }, [fetchIssueDetail]);
 
+  // Sync initialIssue if it changes
+  useEffect(() => {
+    if (initialIssue && initialIssue.id === issueId) {
+      setIssue((prev) => prev || (initialIssue as IssueWithComments));
+      if (!isEditingTitle) setTitleValue(initialIssue.title);
+      if (!isEditingDesc) setDescValue(initialIssue.description || "");
+    }
+  }, [initialIssue, issueId, isEditingTitle, isEditingDesc]);
+
   // Lock body scroll and handle Escape key navigation
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (isEditingTitle) {
+          isTitleEscapePressedRef.current = true;
+          setTitleValue(issue?.title || "");
+          setIsEditingTitle(false);
+          return;
+        }
+        if (isEditingDesc) {
+          isDescEscapePressedRef.current = true;
+          setDescValue(issue?.description || "");
+          setIsEditingDesc(false);
+          return;
+        }
         onClose();
       }
     };
@@ -80,7 +117,112 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [isEditingTitle, isEditingDesc, issue, onClose]);
+
+  // Focus Title input when entering edit mode
+  useEffect(() => {
+    if (isEditingTitle) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isEditingTitle]);
+
+  // Focus Description input when entering edit mode
+  useEffect(() => {
+    if (isEditingDesc) {
+      descInputRef.current?.focus();
+      descInputRef.current?.select();
+    }
+  }, [isEditingDesc]);
+
+  // Handle Title Update (Save on Blur, Escape to cancel)
+  const handleTitleSave = async () => {
+    if (isTitleEscapePressedRef.current) {
+      isTitleEscapePressedRef.current = false;
+      return;
+    }
+    if (!issue) return;
+    const trimmed = titleValue.trim();
+    if (!trimmed) {
+      setTitleValue(issue.title);
+      setIsEditingTitle(false);
+      return;
+    }
+    if (trimmed === issue.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    const previousTitle = issue.title;
+    setIssue((prev) => (prev ? { ...prev, title: trimmed } : prev));
+    setIsEditingTitle(false);
+
+    try {
+      const updated = await updateIssue({
+        issueId: issue.id,
+        title: trimmed,
+      });
+      const merged = { ...issue, title: updated.title };
+      setIssue(merged);
+      onIssueUpdated?.(merged);
+      toast({
+        title: "Title updated",
+        description: "Issue title saved successfully.",
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      setTitleValue(previousTitle);
+      setIssue((prev) => (prev ? { ...prev, title: previousTitle } : prev));
+      toast({
+        title: "Could not update title",
+        description: err?.message || "Failed to update title",
+        variant: "error",
+      });
+    }
+  };
+
+  // Handle Description Update (Save on Blur, Escape to cancel)
+  const handleDescSave = async () => {
+    if (isDescEscapePressedRef.current) {
+      isDescEscapePressedRef.current = false;
+      return;
+    }
+    if (!issue) return;
+    const trimmed = descValue.trim();
+    if (trimmed === (issue.description || "")) {
+      setIsEditingDesc(false);
+      return;
+    }
+
+    const previousDesc = issue.description;
+    setIssue((prev) => (prev ? { ...prev, description: trimmed } : prev));
+    setIsEditingDesc(false);
+
+    try {
+      const updated = await updateIssue({
+        issueId: issue.id,
+        description: trimmed,
+      });
+      const merged = { ...issue, description: updated.description };
+      setIssue(merged);
+      onIssueUpdated?.(merged);
+      toast({
+        title: "Description updated",
+        description: "Saved changes.",
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      setDescValue(previousDesc || "");
+      setIssue((prev) => (prev ? { ...prev, description: previousDesc } : prev));
+      toast({
+        title: "Could not update description",
+        description: err?.message || "Failed to update description",
+        variant: "error",
+      });
+    }
+  };
 
   return (
     <>
@@ -136,10 +278,6 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                 <div className="h-4 w-28 bg-[var(--color-muted)] rounded" />
                 <div className="h-24 w-full bg-[var(--color-muted)] rounded-[var(--radius-md)]" />
               </div>
-              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
-                <div className="h-5 w-32 bg-[var(--color-muted)] rounded" />
-                <div className="h-16 w-full bg-[var(--color-muted)] rounded-[var(--radius-md)]" />
-              </div>
             </div>
           )}
 
@@ -186,18 +324,105 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
             </div>
           )}
 
-          {/* MAIN ISSUE CONTENT */}
+          {/* MAIN ISSUE DETAILS */}
           {issue && !isNotFound && (
-            <div className="space-y-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-foreground)]">
-                {issue.title}
-              </h1>
-              {issue.description && (
-                <p className="text-sm text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">
-                  {issue.description}
-                </p>
-              )}
-            </div>
+            <>
+              {/* 1. TITLE (Inline Editable, Save on Blur, Escape to cancel) */}
+              <div>
+                {isEditingTitle ? (
+                  <div className="space-y-1">
+                    <input
+                      ref={titleInputRef}
+                      type="text"
+                      value={titleValue}
+                      onChange={(e) => setTitleValue(e.target.value)}
+                      onBlur={handleTitleSave}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleTitleSave();
+                        }
+                        if (e.key === "Escape") {
+                          e.stopPropagation();
+                          isTitleEscapePressedRef.current = true;
+                          setTitleValue(issue.title);
+                          setIsEditingTitle(false);
+                        }
+                      }}
+                      className="w-full text-xl sm:text-2xl font-bold bg-[var(--color-card)] border-2 border-[var(--color-primary)] rounded-[var(--radius-md)] p-2 text-[var(--color-foreground)] focus:outline-none shadow-[var(--shadow-sm)]"
+                      placeholder="Issue title"
+                    />
+                    <p className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Press Enter or click outside to save • Esc to cancel
+                    </p>
+                  </div>
+                ) : (
+                  <h1
+                    onClick={() => setIsEditingTitle(true)}
+                    className="text-xl sm:text-2xl font-bold text-[var(--color-foreground)] hover:bg-[var(--color-muted)]/60 p-1.5 -ml-1.5 rounded-[var(--radius-md)] cursor-text transition-colors leading-tight"
+                    title="Click to edit title"
+                  >
+                    {issue.title}
+                  </h1>
+                )}
+              </div>
+
+              {/* 2. DESCRIPTION (Inline Editable, Save on Blur, Escape to cancel) */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                  Description
+                </span>
+
+                {isEditingDesc ? (
+                  <div className="space-y-2">
+                    <textarea
+                      ref={descInputRef}
+                      value={descValue}
+                      onChange={(e) => setDescValue(e.target.value)}
+                      onBlur={handleDescSave}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.stopPropagation();
+                          isDescEscapePressedRef.current = true;
+                          setDescValue(issue.description || "");
+                          setIsEditingDesc(false);
+                        }
+                      }}
+                      rows={4}
+                      placeholder="Add a more detailed description..."
+                      className="w-full text-sm bg-[var(--color-card)] border-2 border-[var(--color-primary)] rounded-[var(--radius-md)] p-3 text-[var(--color-foreground)] focus:outline-none shadow-[var(--shadow-sm)] leading-relaxed"
+                    />
+                    <div className="flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
+                      <span>Click outside or Save • Esc to cancel</span>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleDescSave}
+                        className="cursor-pointer font-medium"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setIsEditingDesc(true)}
+                    className="p-3 rounded-[var(--radius-md)] bg-[var(--color-muted)]/20 hover:bg-[var(--color-muted)]/50 border border-[var(--color-border)] cursor-text transition-colors min-h-[72px]"
+                    title="Click to edit description"
+                  >
+                    {issue.description ? (
+                      <p className="text-sm text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed">
+                        {issue.description}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[var(--color-muted-foreground)] italic">
+                        Add a more detailed description...
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </aside>
