@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import {
   DndContext,
   DragOverlay,
@@ -55,6 +55,7 @@ import { Dropdown, type DropdownItem } from "../components/ui/Dropdown";
 import { Avatar } from "../components/ui/Avatar";
 import { Badge } from "../components/ui/Badge";
 import { Spinner } from "../components/ui/Spinner";
+import { IssueDetailDrawer } from "../components/issue";
 
 // User presence colors
 const USER_COLORS = [
@@ -82,11 +83,13 @@ function getUserColor(userId: string | number): string {
 interface SortableIssueCardProps {
   issue: Issue;
   sectionId: string;
+  onClick?: (issue: Issue) => void;
 }
 
 const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
   issue,
   sectionId,
+  onClick,
 }) => {
   const {
     attributes,
@@ -109,6 +112,17 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
     transition,
   };
 
+  const storedAssigneeIds = React.useMemo(() => {
+    if (issue.issueMappings && issue.issueMappings.length > 0) {
+      return issue.issueMappings.map((m) => m.userId);
+    }
+    try {
+      const s = localStorage.getItem(`issue_assignees_${issue.id}`);
+      if (s) return JSON.parse(s) as string[];
+    } catch {}
+    return [];
+  }, [issue.id, issue.issueMappings]);
+
   if (isDragging) {
     return (
       <div
@@ -126,8 +140,19 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
       {...attributes}
       {...listeners}
       tabIndex={0}
+      role="button"
       aria-label={`Issue: ${issue.title}`}
-      className="group relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3.5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--color-primary)]/50 transition-all duration-150 cursor-grab active:cursor-grabbing select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      onClick={(e) => {
+        if (e.button !== 0) return;
+        onClick?.(issue);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.(issue);
+        }
+      }}
+      className="group relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3.5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--color-primary)]/50 transition-all duration-150 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
       <div className="text-sm font-medium text-[var(--color-foreground)] leading-snug line-clamp-3 mb-2.5">
         {issue.title}
@@ -143,13 +168,24 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
           <span>{issue.comments?.length || 0}</span>
         </div>
 
-        {/* Assignee Avatar */}
-        <div className="flex items-center -space-x-1.5">
-          <Avatar
-            name={issue.title}
-            size="sm"
-            className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
-          />
+        {/* Assignee Avatars */}
+        <div className="flex items-center -space-x-1.5" title="Assignees">
+          {storedAssigneeIds.length > 0 ? (
+            storedAssigneeIds.slice(0, 3).map((uid) => (
+              <Avatar
+                key={uid}
+                name={uid === "me" ? "You" : uid}
+                size="sm"
+                className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
+              />
+            ))
+          ) : (
+            <Avatar
+              name={issue.title}
+              size="sm"
+              className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
+            />
+          )}
         </div>
       </div>
     </div>
@@ -183,6 +219,7 @@ interface BoardColumnProps {
   onRenameSection: (sectionId: string, title: string) => Promise<void>;
   onDeleteSectionClick: (section: Section) => void;
   onAddIssue: (sectionId: string, title: string) => Promise<void>;
+  onIssueClick?: (issue: Issue) => void;
 }
 
 const BoardColumn: React.FC<BoardColumnProps> = ({
@@ -191,6 +228,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
   onRenameSection,
   onDeleteSectionClick,
   onAddIssue,
+  onIssueClick,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: section.id,
@@ -355,6 +393,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
               key={issue.id}
               issue={issue}
               sectionId={section.id}
+              onClick={onIssueClick}
             />
           ))}
 
@@ -430,7 +469,8 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 // 3. Main BoardPage Component
 // ==========================================
 export const BoardPage: React.FC = () => {
-  const { boardId } = useParams<{ boardId: string }>();
+  const { boardId, issueId } = useParams<{ boardId: string; issueId?: string }>();
+  const navigate = useNavigate();
   const { boards } = useWorkspace();
   const { toast } = useToast();
 
@@ -445,6 +485,51 @@ export const BoardPage: React.FC = () => {
   // Active Dragging Issue
   const [activeDragIssue, setActiveDragIssue] = useState<Issue | null>(null);
   const dragSourceSectionId = useRef<string | null>(null);
+  const isDraggingRef = useRef(false);
+
+  // Drawer and navigation callbacks
+  const handleIssueClick = useCallback(
+    (clickedIssue: Issue) => {
+      if (isDraggingRef.current) return;
+      if (boardId) {
+        navigate(`/board/${boardId}/issue/${clickedIssue.id}`);
+      }
+    },
+    [boardId, navigate]
+  );
+
+  const handleCloseDrawer = useCallback(() => {
+    if (boardId) {
+      navigate(`/board/${boardId}`);
+    }
+  }, [boardId, navigate]);
+
+  const handleIssueUpdated = useCallback((updated: Issue | IssueWithComments) => {
+    setIssues((prev) =>
+      prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+    );
+  }, []);
+
+  const handleIssueMovedFromDrawer = useCallback(
+    (movedIssueId: string, targetSectionId: string) => {
+      setIssues((prev) =>
+        prev.map((i) =>
+          i.id === movedIssueId ? { ...i, sectionId: targetSectionId } : i
+        )
+      );
+    },
+    []
+  );
+
+  const handleIssueDeletedFromDrawer = useCallback(
+    (deletedId: string) => {
+      setIssues((prev) => prev.filter((i) => i.id !== deletedId));
+      if (boardId) {
+        navigate(`/board/${boardId}`);
+      }
+    },
+    [boardId, navigate]
+  );
 
   // Section Deletion State
   const [deleteSectionTarget, setDeleteSectionTarget] = useState<Section | null>(null);
@@ -746,12 +831,20 @@ export const BoardPage: React.FC = () => {
 
   // Drag and drop event handlers
   const handleDragStart = (event: DragStartEvent) => {
+    isDraggingRef.current = true;
     const { active } = event;
     const issue = issues.find((i) => i.id === active.id);
     if (issue) {
       setActiveDragIssue(issue);
       dragSourceSectionId.current = issue.sectionId;
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragIssue(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 100);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -791,6 +884,9 @@ export const BoardPage: React.FC = () => {
     const activeId = String(active.id);
 
     setActiveDragIssue(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 100);
 
     if (!over) {
       // If dropped outside, revert to source section
@@ -986,6 +1082,7 @@ export const BoardPage: React.FC = () => {
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 sm:p-6 flex flex-row items-start gap-4 sm:gap-6 min-h-0 scrollbar-thin">
             {/* Render Columns */}
@@ -1001,6 +1098,7 @@ export const BoardPage: React.FC = () => {
                   onRenameSection={handleRenameSection}
                   onDeleteSectionClick={(s) => setDeleteSectionTarget(s)}
                   onAddIssue={handleAddIssue}
+                  onIssueClick={handleIssueClick}
                 />
               );
             })}
@@ -1120,6 +1218,20 @@ export const BoardPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* ================= ISSUE DETAIL DRAWER ================= */}
+      {issueId && boardId && (
+        <IssueDetailDrawer
+          boardId={boardId}
+          issueId={issueId}
+          sections={sections}
+          initialIssue={issues.find((i) => i.id === issueId)}
+          onClose={handleCloseDrawer}
+          onIssueUpdated={handleIssueUpdated}
+          onIssueMoved={handleIssueMovedFromDrawer}
+          onIssueDeleted={handleIssueDeletedFromDrawer}
+        />
+      )}
     </div>
   );
 };

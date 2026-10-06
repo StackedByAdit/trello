@@ -1,0 +1,1 @@
+export { IssueDetailDrawer } from "./IssueDetailDrawer";

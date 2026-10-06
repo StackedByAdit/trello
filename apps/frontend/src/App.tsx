@@ -48,6 +48,10 @@ export function App() {
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/board/:boardId" element={<BoardPage />} />
                   <Route
+                    path="/board/:boardId/issue/:issueId"
+                    element={<BoardPage />}
+                  />
+                  <Route
                     path="/members"
                     element={<SimplePlaceholder title="Workspace Members" />}
                   />
