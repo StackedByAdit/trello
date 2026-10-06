@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { X, Kanban, AlertCircle } from "lucide-react";
-import { getIssue, updateIssue } from "../../lib/api";
+import { X, Kanban, AlertCircle, ChevronDown, Clock } from "lucide-react";
+import { getIssue, updateIssue, moveIssue } from "../../lib/api";
 import type { IssueWithComments, Section, Issue } from "../../lib/types";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useToast } from "../ui/Toast";
@@ -15,6 +15,30 @@ interface IssueDetailDrawerProps {
   onIssueUpdated?: (updatedIssue: IssueWithComments | Issue) => void;
   onIssueMoved?: (issueId: string, targetSectionId: string) => void;
   onIssueDeleted?: (issueId: string) => void;
+}
+
+function formatRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffSec < 60) return "just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    });
+  } catch {
+    return "recently";
+  }
 }
 
 export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
@@ -48,6 +72,9 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   const [descValue, setDescValue] = useState(initialIssue?.description || "");
   const descInputRef = useRef<HTMLTextAreaElement>(null);
   const isDescEscapePressedRef = useRef(false);
+
+  // Section / Status selector state
+  const [isMovingSection, setIsMovingSection] = useState(false);
 
   // Fetch issue details
   const fetchIssueDetail = useCallback(async () => {
@@ -224,6 +251,40 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
   };
 
+  // Handle Section / Column Change
+  const handleSectionChange = async (targetSectionId: string) => {
+    if (!issue || issue.sectionId === targetSectionId) return;
+
+    const previousSectionId = issue.sectionId;
+    setIssue((prev) => (prev ? { ...prev, sectionId: targetSectionId } : prev));
+    setIsMovingSection(true);
+
+    try {
+      await moveIssue({
+        issueId: issue.id,
+        sectionId: targetSectionId,
+      });
+      onIssueMoved?.(issue.id, targetSectionId);
+      toast({
+        title: "Moved issue",
+        description: `Moved to ${
+          sections.find((s) => s.id === targetSectionId)?.title || "new column"
+        }.`,
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      setIssue((prev) => (prev ? { ...prev, sectionId: previousSectionId } : prev));
+      toast({
+        title: "Could not move issue",
+        description: err?.message || "Failed to move issue",
+        variant: "error",
+      });
+    } finally {
+      setIsMovingSection(false);
+    }
+  };
+
   return (
     <>
       {/* Drawer Overlay Backdrop */}
@@ -367,7 +428,44 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                 )}
               </div>
 
-              {/* 2. DESCRIPTION (Inline Editable, Save on Blur, Escape to cancel) */}
+              {/* 2. SECTION SELECTOR & METADATA GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-[var(--radius-lg)] bg-[var(--color-muted)]/40 border border-[var(--color-border)]/60 text-xs">
+                {/* Column / Status Selector */}
+                <div className="space-y-1.5">
+                  <label htmlFor="issue-section-select" className="font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wider text-[10px]">
+                    Status / List
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="issue-section-select"
+                      value={issue.sectionId}
+                      onChange={(e) => handleSectionChange(e.target.value)}
+                      disabled={isMovingSection}
+                      className="w-full appearance-none bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] cursor-pointer hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] transition-colors pr-8"
+                    >
+                      {sections.map((sec) => (
+                        <option key={sec.id} value={sec.id}>
+                          {sec.title}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)] pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Created Date */}
+                <div className="space-y-1.5">
+                  <span className="font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wider text-[10px]">
+                    Created
+                  </span>
+                  <div className="flex items-center gap-1.5 h-9 text-xs text-[var(--color-foreground)] font-medium">
+                    <Clock className="w-3.5 h-3.5 text-[var(--color-muted-foreground)]" />
+                    <span>{formatRelativeTime(issue.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. DESCRIPTION (Inline Editable, Save on Blur, Escape to cancel) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                   Description

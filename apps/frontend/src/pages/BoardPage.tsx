@@ -479,6 +479,17 @@ export const BoardPage: React.FC = () => {
     );
   }, []);
 
+  const handleIssueMovedFromDrawer = useCallback(
+    (movedIssueId: string, targetSectionId: string) => {
+      setIssues((prev) =>
+        prev.map((i) =>
+          i.id === movedIssueId ? { ...i, sectionId: targetSectionId } : i
+        )
+      );
+    },
+    []
+  );
+
   // Sections & Issues State
   const [sections, setSections] = useState<Section[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -1186,6 +1197,7 @@ export const BoardPage: React.FC = () => {
           initialIssue={issues.find((i) => i.id === issueId)}
           onClose={handleCloseDrawer}
           onIssueUpdated={handleIssueUpdated}
+          onIssueMoved={handleIssueMovedFromDrawer}
         />
       )}
     </div>
