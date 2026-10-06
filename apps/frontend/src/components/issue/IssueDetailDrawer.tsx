@@ -7,9 +7,11 @@ import {
   Clock,
   UserPlus,
   Check,
+  MessageSquare,
+  Send,
 } from "lucide-react";
-import { getIssue, updateIssue, moveIssue } from "../../lib/api";
-import type { IssueWithComments, Section, Issue } from "../../lib/types";
+import { getIssue, updateIssue, moveIssue, createComment } from "../../lib/api";
+import type { IssueWithComments, Comment, Section, Issue } from "../../lib/types";
 import { useAuth } from "../../auth";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useToast } from "../ui/Toast";
@@ -99,6 +101,13 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   const [isAssigneePickerOpen, setIsAssigneePickerOpen] = useState(false);
   const assigneePickerRef = useRef<HTMLDivElement>(null);
 
+  // Comments state
+  const [comments, setComments] = useState<Comment[]>(
+    initialIssue?.comments || []
+  );
+  const [newCommentText, setNewCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   // Load assignees from localStorage
   const loadStoredAssignees = useCallback((id: string) => {
     try {
@@ -135,6 +144,11 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       setIssue(data);
       setTitleValue(data.title);
       setDescValue(data.description || "");
+      // Sort comments with newest first
+      const sorted = [...(data.comments || [])].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setComments(sorted);
 
       const assignees =
         data.issueMappings && data.issueMappings.length > 0
@@ -403,6 +417,44 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
         issueId: issue.id,
       })),
     });
+  };
+
+  // Handle Add Comment (Ctrl/Cmd+Enter to send)
+  const handleAddComment = async () => {
+    if (!issue || isSubmittingComment) return;
+    const trimmed = newCommentText.trim();
+    if (!trimmed) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const created = await createComment({
+        text: trimmed,
+        issueId: issue.id,
+      });
+
+      const updatedComments = [created, ...comments];
+      setComments(updatedComments);
+      setNewCommentText("");
+
+      const updatedIssue = { ...issue, comments: updatedComments };
+      setIssue(updatedIssue);
+      onIssueUpdated?.(updatedIssue);
+
+      toast({
+        title: "Comment added",
+        description: "Your comment was posted.",
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not add comment",
+        description: err?.data?.message || err?.message || "Failed to post comment",
+        variant: "error",
+      });
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   return (
@@ -718,6 +770,97 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* 5. COMMENTS SECTION */}
+              <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[var(--color-primary)]" />
+                  <h3 className="text-sm font-bold text-[var(--color-foreground)]">
+                    Comments ({comments.length})
+                  </h3>
+                </div>
+
+                {/* Add Comment Composer (Ctrl/Cmd+Enter to send) */}
+                <div className="space-y-2">
+                  <textarea
+                    value={newCommentText}
+                    onChange={(e) => setNewCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                    placeholder="Write a comment... (Ctrl+Enter to send)"
+                    rows={2}
+                    disabled={isSubmittingComment}
+                    className="w-full text-sm p-3 bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] focus:border-[var(--color-primary)] focus:outline-none text-[var(--color-foreground)] shadow-[var(--shadow-sm)]"
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                      Tip: Press <kbd className="px-1 py-0.5 rounded bg-[var(--color-muted)] font-mono text-[10px]">Ctrl+Enter</kbd> to submit
+                    </span>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleAddComment}
+                      isLoading={isSubmittingComment}
+                      disabled={isSubmittingComment || !newCommentText.trim()}
+                      leftIcon={<Send className="w-3.5 h-3.5" />}
+                      className="cursor-pointer font-semibold shadow-[var(--shadow-sm)]"
+                    >
+                      Comment
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Comments List */}
+                <div className="space-y-3 pt-2">
+                  {comments.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-[var(--color-muted-foreground)] border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)]">
+                      No comments yet. Be the first to share an update.
+                    </div>
+                  ) : (
+                    comments.map((comment) => {
+                      const isOwnComment = comment.userId === userId || (!comment.userId && !userId);
+                      const member = orgMembers.find((m) => m.id === comment.userId);
+                      const authorName = isOwnComment
+                        ? "You"
+                        : member?.name || `User #${comment.userId.slice(0, 5)}`;
+
+                      return (
+                        <div
+                          key={comment.id}
+                          className="p-3 rounded-[var(--radius-lg)] bg-[var(--color-card)] border border-[var(--color-border)] shadow-[var(--shadow-sm)] space-y-2"
+                        >
+                          {/* Comment Header: Author & Timestamp */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar
+                                name={authorName}
+                                size="sm"
+                                className="w-6 h-6 text-[10px]"
+                              />
+                              <span className="text-xs font-bold text-[var(--color-foreground)]">
+                                {authorName}
+                              </span>
+                              <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                                • {formatRelativeTime(comment.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Comment Body */}
+                          <p className="text-xs text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed pl-8">
+                            {comment.text}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </>
           )}
