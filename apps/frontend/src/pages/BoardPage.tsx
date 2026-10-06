@@ -476,15 +476,18 @@ export const BoardPage: React.FC = () => {
 
   const currentBoard = boards.find((b) => b.id === boardId);
 
-  // Close drawer handler
-  const handleCloseDrawer = useCallback(() => {
-    if (boardId) {
-      navigate(`/board/${boardId}`);
-    }
-  }, [boardId, navigate]);
+  // Sections & Issues State
+  const [sections, setSections] = useState<Section[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Active Dragging Issue
+  const [activeDragIssue, setActiveDragIssue] = useState<Issue | null>(null);
+  const dragSourceSectionId = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
 
+  // Drawer and navigation callbacks
   const handleIssueClick = useCallback(
     (clickedIssue: Issue) => {
       if (isDraggingRef.current) return;
@@ -494,6 +497,12 @@ export const BoardPage: React.FC = () => {
     },
     [boardId, navigate]
   );
+
+  const handleCloseDrawer = useCallback(() => {
+    if (boardId) {
+      navigate(`/board/${boardId}`);
+    }
+  }, [boardId, navigate]);
 
   const handleIssueUpdated = useCallback((updated: Issue | IssueWithComments) => {
     setIssues((prev) =>
@@ -512,15 +521,15 @@ export const BoardPage: React.FC = () => {
     []
   );
 
-  // Sections & Issues State
-  const [sections, setSections] = useState<Section[]>([]);
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  // Active Dragging Issue
-  const [activeDragIssue, setActiveDragIssue] = useState<Issue | null>(null);
-  const dragSourceSectionId = useRef<string | null>(null);
+  const handleIssueDeletedFromDrawer = useCallback(
+    (deletedId: string) => {
+      setIssues((prev) => prev.filter((i) => i.id !== deletedId));
+      if (boardId) {
+        navigate(`/board/${boardId}`);
+      }
+    },
+    [boardId, navigate]
+  );
 
   // Section Deletion State
   const [deleteSectionTarget, setDeleteSectionTarget] = useState<Section | null>(null);
@@ -1220,6 +1229,7 @@ export const BoardPage: React.FC = () => {
           onClose={handleCloseDrawer}
           onIssueUpdated={handleIssueUpdated}
           onIssueMoved={handleIssueMovedFromDrawer}
+          onIssueDeleted={handleIssueDeletedFromDrawer}
         />
       )}
     </div>

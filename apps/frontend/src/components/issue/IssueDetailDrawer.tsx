@@ -1,22 +1,35 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
 import {
   X,
+  Trash2,
   Kanban,
-  AlertCircle,
-  ChevronDown,
-  Clock,
+  MessageSquare,
   UserPlus,
   Check,
-  MessageSquare,
+  AlertCircle,
+  Edit2,
+  Clock,
   Send,
+  ChevronDown,
 } from "lucide-react";
-import { getIssue, updateIssue, moveIssue, createComment } from "../../lib/api";
+import {
+  getIssue,
+  updateIssue,
+  moveIssue,
+  deleteIssue,
+  createComment,
+  updateComment,
+  deleteComment,
+} from "../../lib/api";
 import type { IssueWithComments, Comment, Section, Issue } from "../../lib/types";
 import { useAuth } from "../../auth";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useToast } from "../ui/Toast";
 import { Button } from "../ui/Button";
 import { Avatar } from "../ui/Avatar";
+import { Modal } from "../ui/Modal";
+import { Spinner } from "../ui/Spinner";
 
 interface OrgMember {
   id: string;
@@ -70,6 +83,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   onIssueMoved,
   onIssueDeleted,
 }) => {
+  const navigate = useNavigate();
   const { userId } = useAuth();
   const { activeOrg } = useWorkspace();
   const { toast } = useToast();
@@ -107,6 +121,14 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   );
   const [newCommentText, setNewCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+
+  // Delete issue modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingIssue, setIsDeletingIssue] = useState(false);
 
   // Load assignees from localStorage
   const loadStoredAssignees = useCallback((id: string) => {
@@ -128,6 +150,15 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       // ignore
     }
   }, []);
+
+  // Sync initialIssue if it changes
+  useEffect(() => {
+    if (initialIssue && initialIssue.id === issueId) {
+      setIssue((prev) => prev || (initialIssue as IssueWithComments));
+      if (!isEditingTitle) setTitleValue(initialIssue.title);
+      if (!isEditingDesc) setDescValue(initialIssue.description || "");
+    }
+  }, [initialIssue, issueId, isEditingTitle, isEditingDesc]);
 
   // Fetch issue details
   const fetchIssueDetail = useCallback(async () => {
@@ -172,21 +203,13 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     fetchIssueDetail();
   }, [fetchIssueDetail]);
 
-  // Sync initialIssue if it changes
-  useEffect(() => {
-    if (initialIssue && initialIssue.id === issueId) {
-      setIssue((prev) => prev || (initialIssue as IssueWithComments));
-      if (!isEditingTitle) setTitleValue(initialIssue.title);
-      if (!isEditingDesc) setDescValue(initialIssue.description || "");
-    }
-  }, [initialIssue, issueId, isEditingTitle, isEditingDesc]);
-
-  // Lock body scroll and handle Escape key navigation
+  // Lock body scroll and Escape key navigation
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // If an inline input or dropdown is active, let them handle it first
         if (isEditingTitle) {
           isTitleEscapePressedRef.current = true;
           setTitleValue(issue?.title || "");
@@ -203,6 +226,15 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
           setIsAssigneePickerOpen(false);
           return;
         }
+        if (editingCommentId) {
+          setEditingCommentId(null);
+          return;
+        }
+        if (isDeleteModalOpen) {
+          setIsDeleteModalOpen(false);
+          return;
+        }
+        // Otherwise close drawer
         onClose();
       }
     };
@@ -212,7 +244,15 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isEditingTitle, isEditingDesc, isAssigneePickerOpen, issue, onClose]);
+  }, [
+    isEditingTitle,
+    isEditingDesc,
+    isAssigneePickerOpen,
+    editingCommentId,
+    isDeleteModalOpen,
+    issue,
+    onClose,
+  ]);
 
   // Handle outside click for assignee picker dropdown
   useEffect(() => {
@@ -275,7 +315,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     },
   ];
 
-  // Handle Title Update (Save on Blur, Escape to cancel)
+  // 1. Handle Title Update (Save on Blur, Escape to cancel)
   const handleTitleSave = async () => {
     if (isTitleEscapePressedRef.current) {
       isTitleEscapePressedRef.current = false;
@@ -284,6 +324,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     if (!issue) return;
     const trimmed = titleValue.trim();
     if (!trimmed) {
+      // Revert if empty
       setTitleValue(issue.title);
       setIsEditingTitle(false);
       return;
@@ -294,6 +335,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
 
     const previousTitle = issue.title;
+    // Optimistic update
     setIssue((prev) => (prev ? { ...prev, title: trimmed } : prev));
     setIsEditingTitle(false);
 
@@ -312,6 +354,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
         duration: 1500,
       });
     } catch (err: any) {
+      // Roll back
       setTitleValue(previousTitle);
       setIssue((prev) => (prev ? { ...prev, title: previousTitle } : prev));
       toast({
@@ -322,7 +365,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
   };
 
-  // Handle Description Update (Save on Blur, Escape to cancel)
+  // 2. Handle Description Update (Save on Blur, Escape to cancel)
   const handleDescSave = async () => {
     if (isDescEscapePressedRef.current) {
       isDescEscapePressedRef.current = false;
@@ -336,6 +379,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
 
     const previousDesc = issue.description;
+    // Optimistic update
     setIssue((prev) => (prev ? { ...prev, description: trimmed } : prev));
     setIsEditingDesc(false);
 
@@ -354,6 +398,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
         duration: 1500,
       });
     } catch (err: any) {
+      // Roll back
       setDescValue(previousDesc || "");
       setIssue((prev) => (prev ? { ...prev, description: previousDesc } : prev));
       toast({
@@ -364,11 +409,12 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
   };
 
-  // Handle Section / Column Change
+  // 3. Handle Section / Column Change
   const handleSectionChange = async (targetSectionId: string) => {
     if (!issue || issue.sectionId === targetSectionId) return;
 
     const previousSectionId = issue.sectionId;
+    // Optimistic update
     setIssue((prev) => (prev ? { ...prev, sectionId: targetSectionId } : prev));
     setIsMovingSection(true);
 
@@ -387,6 +433,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
         duration: 1500,
       });
     } catch (err: any) {
+      // Roll back
       setIssue((prev) => (prev ? { ...prev, sectionId: previousSectionId } : prev));
       toast({
         title: "Could not move issue",
@@ -398,7 +445,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
   };
 
-  // Handle Assignee Toggle
+  // 4. Handle Assignee Toggle
   const handleToggleAssignee = (memberId: string) => {
     if (!issue) return;
     const isCurrentlyAssigned = assignedUserIds.includes(memberId);
@@ -409,6 +456,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     setAssignedUserIds(updated);
     saveStoredAssignees(issue.id, updated);
 
+    // Notify parent to update cards on the board
     onIssueUpdated?.({
       ...issue,
       issueMappings: updated.map((uid) => ({
@@ -419,7 +467,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     });
   };
 
-  // Handle Add Comment (Ctrl/Cmd+Enter to send)
+  // 5. Handle Add Comment (Ctrl/Cmd+Enter to send)
   const handleAddComment = async () => {
     if (!issue || isSubmittingComment) return;
     const trimmed = newCommentText.trim();
@@ -457,6 +505,109 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     }
   };
 
+  // 6. Handle Edit Comment
+  const handleStartEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.text);
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    const trimmed = editingCommentText.trim();
+    if (!trimmed) return;
+
+    setIsUpdatingComment(true);
+    try {
+      const updated = await updateComment({
+        commentId,
+        text: trimmed,
+      });
+
+      const updatedComments = comments.map((c) =>
+        c.id === commentId ? { ...c, text: updated.text } : c
+      );
+      setComments(updatedComments);
+      setEditingCommentId(null);
+
+      if (issue) {
+        const updatedIssue = { ...issue, comments: updatedComments };
+        setIssue(updatedIssue);
+        onIssueUpdated?.(updatedIssue);
+      }
+
+      toast({
+        title: "Comment updated",
+        description: "Saved changes.",
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not update comment",
+        description: err?.message || "Failed to edit comment",
+        variant: "error",
+      });
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  // 7. Handle Delete Comment
+  const handleDeleteComment = async (commentId: string) => {
+    setDeletingCommentId(commentId);
+    try {
+      await deleteComment(commentId);
+      const updatedComments = comments.filter((c) => c.id !== commentId);
+      setComments(updatedComments);
+
+      if (issue) {
+        const updatedIssue = { ...issue, comments: updatedComments };
+        setIssue(updatedIssue);
+        onIssueUpdated?.(updatedIssue);
+      }
+
+      toast({
+        title: "Comment deleted",
+        description: "Comment removed.",
+        variant: "success",
+        duration: 1500,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not delete comment",
+        description: err?.message || "Failed to delete comment",
+        variant: "error",
+      });
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
+  // 8. Handle Delete Issue with confirmation
+  const handleDeleteIssueConfirm = async () => {
+    if (!issue || isDeletingIssue) return;
+
+    setIsDeletingIssue(true);
+    try {
+      await deleteIssue(issue.id);
+      toast({
+        title: "Issue deleted",
+        description: `"${issue.title}" was removed.`,
+        variant: "success",
+      });
+      setIsDeleteModalOpen(false);
+      onIssueDeleted?.(issue.id);
+      onClose();
+    } catch (err: any) {
+      toast({
+        title: "Could not delete issue",
+        description: err?.message || "Failed to delete issue",
+        variant: "error",
+      });
+    } finally {
+      setIsDeletingIssue(false);
+    }
+  };
+
   return (
     <>
       {/* Drawer Overlay Backdrop */}
@@ -485,6 +636,17 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            {issue && (
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/10 rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+                title="Delete issue"
+                aria-label="Delete issue"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -510,6 +672,10 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
               <div className="space-y-2">
                 <div className="h-4 w-28 bg-[var(--color-muted)] rounded" />
                 <div className="h-24 w-full bg-[var(--color-muted)] rounded-[var(--radius-md)]" />
+              </div>
+              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
+                <div className="h-5 w-32 bg-[var(--color-muted)] rounded" />
+                <div className="h-16 w-full bg-[var(--color-muted)] rounded-[var(--radius-md)]" />
               </div>
             </div>
           )}
@@ -825,6 +991,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                   ) : (
                     comments.map((comment) => {
                       const isOwnComment = comment.userId === userId || (!comment.userId && !userId);
+                      const isEditingThisComment = editingCommentId === comment.id;
                       const member = orgMembers.find((m) => m.id === comment.userId);
                       const authorName = isOwnComment
                         ? "You"
@@ -850,12 +1017,83 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                                 • {formatRelativeTime(comment.createdAt)}
                               </span>
                             </div>
+
+                            {/* Own comment action buttons: ONLY shown for author's own comments */}
+                            {isOwnComment && !isEditingThisComment && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditComment(comment)}
+                                  className="p-1 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] rounded transition-colors cursor-pointer"
+                                  title="Edit comment"
+                                  aria-label="Edit comment"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  disabled={deletingCommentId === comment.id}
+                                  className="p-1 text-[var(--color-muted-foreground)] hover:text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/10 rounded transition-colors cursor-pointer"
+                                  title="Delete comment"
+                                  aria-label="Delete comment"
+                                >
+                                  {deletingCommentId === comment.id ? (
+                                    <Spinner size="sm" />
+                                  ) : (
+                                    <Trash2 className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                           {/* Comment Body */}
-                          <p className="text-xs text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed pl-8">
-                            {comment.text}
-                          </p>
+                          {isEditingThisComment ? (
+                            <div className="space-y-2 pt-1">
+                              <textarea
+                                value={editingCommentText}
+                                onChange={(e) => setEditingCommentText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") setEditingCommentId(null);
+                                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveEditComment(comment.id);
+                                  }
+                                }}
+                                rows={2}
+                                className="w-full text-xs p-2 bg-[var(--color-card)] border border-[var(--color-primary)] rounded-[var(--radius-md)] focus:outline-none"
+                              />
+                              <div className="flex items-center justify-between text-[10px] text-[var(--color-muted-foreground)]">
+                                <span>Press Ctrl+Enter to save • Esc to cancel</span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingCommentId(null)}
+                                    disabled={isUpdatingComment}
+                                    className="text-xs cursor-pointer"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => handleSaveEditComment(comment.id)}
+                                    isLoading={isUpdatingComment}
+                                    disabled={isUpdatingComment || !editingCommentText.trim()}
+                                    className="text-xs cursor-pointer font-semibold"
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[var(--color-foreground)] whitespace-pre-wrap leading-relaxed pl-8">
+                              {comment.text}
+                            </p>
+                          )}
                         </div>
                       );
                     })
@@ -866,6 +1104,53 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
           )}
         </div>
       </aside>
+
+      {/* ================= MODAL: DELETE ISSUE CONFIRMATION ================= */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Issue"
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeletingIssue}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="md"
+              onClick={handleDeleteIssueConfirm}
+              isLoading={isDeletingIssue}
+              disabled={isDeletingIssue}
+              className="cursor-pointer font-semibold"
+            >
+              Delete Issue
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--color-foreground)]">
+            Are you sure you want to delete{" "}
+            <span className="font-bold text-[var(--color-destructive)]">
+              "{issue?.title}"
+            </span>
+            ?
+          </p>
+          <div className="p-3 rounded-[var(--radius-md)] bg-[var(--color-destructive)]/10 text-xs text-[var(--color-destructive)] flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>This action cannot be undone. All comments on this card will be permanently deleted.</span>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };
