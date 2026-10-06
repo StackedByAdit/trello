@@ -112,6 +112,17 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
     transition,
   };
 
+  const storedAssigneeIds = React.useMemo(() => {
+    if (issue.issueMappings && issue.issueMappings.length > 0) {
+      return issue.issueMappings.map((m) => m.userId);
+    }
+    try {
+      const s = localStorage.getItem(`issue_assignees_${issue.id}`);
+      if (s) return JSON.parse(s) as string[];
+    } catch {}
+    return [];
+  }, [issue.id, issue.issueMappings]);
+
   if (isDragging) {
     return (
       <div
@@ -157,13 +168,24 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
           <span>{issue.comments?.length || 0}</span>
         </div>
 
-        {/* Assignee Avatar */}
-        <div className="flex items-center -space-x-1.5">
-          <Avatar
-            name={issue.title}
-            size="sm"
-            className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
-          />
+        {/* Assignee Avatars */}
+        <div className="flex items-center -space-x-1.5" title="Assignees">
+          {storedAssigneeIds.length > 0 ? (
+            storedAssigneeIds.slice(0, 3).map((uid) => (
+              <Avatar
+                key={uid}
+                name={uid === "me" ? "You" : uid}
+                size="sm"
+                className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
+              />
+            ))
+          ) : (
+            <Avatar
+              name={issue.title}
+              size="sm"
+              className="w-5 h-5 text-[10px] ring-1 ring-[var(--color-card)]"
+            />
+          )}
         </div>
       </div>
     </div>

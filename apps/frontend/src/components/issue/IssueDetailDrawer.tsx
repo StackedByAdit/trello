@@ -1,10 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { X, Kanban, AlertCircle, ChevronDown, Clock } from "lucide-react";
+import {
+  X,
+  Kanban,
+  AlertCircle,
+  ChevronDown,
+  Clock,
+  UserPlus,
+  Check,
+} from "lucide-react";
 import { getIssue, updateIssue, moveIssue } from "../../lib/api";
 import type { IssueWithComments, Section, Issue } from "../../lib/types";
+import { useAuth } from "../../auth";
 import { useWorkspace } from "../../context/WorkspaceContext";
 import { useToast } from "../ui/Toast";
 import { Button } from "../ui/Button";
+import { Avatar } from "../ui/Avatar";
+
+interface OrgMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface IssueDetailDrawerProps {
   boardId: string;
@@ -51,6 +68,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   onIssueMoved,
   onIssueDeleted,
 }) => {
+  const { userId } = useAuth();
   const { activeOrg } = useWorkspace();
   const { toast } = useToast();
 
@@ -76,6 +94,32 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
   // Section / Status selector state
   const [isMovingSection, setIsMovingSection] = useState(false);
 
+  // Assignees picker state
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
+  const [isAssigneePickerOpen, setIsAssigneePickerOpen] = useState(false);
+  const assigneePickerRef = useRef<HTMLDivElement>(null);
+
+  // Load assignees from localStorage
+  const loadStoredAssignees = useCallback((id: string) => {
+    try {
+      const stored = localStorage.getItem(`issue_assignees_${id}`);
+      if (stored) {
+        return JSON.parse(stored) as string[];
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  }, []);
+
+  const saveStoredAssignees = useCallback((id: string, userIds: string[]) => {
+    try {
+      localStorage.setItem(`issue_assignees_${id}`, JSON.stringify(userIds));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Fetch issue details
   const fetchIssueDetail = useCallback(async () => {
     if (!issueId) return;
@@ -91,6 +135,12 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       setIssue(data);
       setTitleValue(data.title);
       setDescValue(data.description || "");
+
+      const assignees =
+        data.issueMappings && data.issueMappings.length > 0
+          ? data.issueMappings.map((m) => m.userId)
+          : loadStoredAssignees(data.id);
+      setAssignedUserIds(assignees);
     } catch (err: any) {
       if (err?.status === 404) {
         setIsNotFound(true);
@@ -102,7 +152,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [issueId]);
+  }, [issueId, loadStoredAssignees]);
 
   useEffect(() => {
     fetchIssueDetail();
@@ -135,6 +185,10 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
           setIsEditingDesc(false);
           return;
         }
+        if (isAssigneePickerOpen) {
+          setIsAssigneePickerOpen(false);
+          return;
+        }
         onClose();
       }
     };
@@ -144,7 +198,24 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isEditingTitle, isEditingDesc, issue, onClose]);
+  }, [isEditingTitle, isEditingDesc, isAssigneePickerOpen, issue, onClose]);
+
+  // Handle outside click for assignee picker dropdown
+  useEffect(() => {
+    if (!isAssigneePickerOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        assigneePickerRef.current &&
+        !assigneePickerRef.current.contains(e.target as Node)
+      ) {
+        setIsAssigneePickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAssigneePickerOpen]);
 
   // Focus Title input when entering edit mode
   useEffect(() => {
@@ -161,6 +232,34 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
       descInputRef.current?.select();
     }
   }, [isEditingDesc]);
+
+  // Workspace members for assignee picker
+  const orgMembers: OrgMember[] = [
+    {
+      id: userId || "me",
+      name: "You",
+      email: "you@workspace.com",
+      role: "Current User",
+    },
+    {
+      id: "member-alex",
+      name: "Alex Rivers",
+      email: "alex.rivers@workspace.com",
+      role: "Engineering",
+    },
+    {
+      id: "member-sarah",
+      name: "Sarah Chen",
+      email: "sarah.chen@workspace.com",
+      role: "Design Lead",
+    },
+    {
+      id: "member-david",
+      name: "David Kim",
+      email: "david.kim@workspace.com",
+      role: "Product Manager",
+    },
+  ];
 
   // Handle Title Update (Save on Blur, Escape to cancel)
   const handleTitleSave = async () => {
@@ -283,6 +382,27 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
     } finally {
       setIsMovingSection(false);
     }
+  };
+
+  // Handle Assignee Toggle
+  const handleToggleAssignee = (memberId: string) => {
+    if (!issue) return;
+    const isCurrentlyAssigned = assignedUserIds.includes(memberId);
+    const updated = isCurrentlyAssigned
+      ? assignedUserIds.filter((id) => id !== memberId)
+      : [...assignedUserIds, memberId];
+
+    setAssignedUserIds(updated);
+    saveStoredAssignees(issue.id, updated);
+
+    onIssueUpdated?.({
+      ...issue,
+      issueMappings: updated.map((uid) => ({
+        id: uid,
+        userId: uid,
+        issueId: issue.id,
+      })),
+    });
   };
 
   return (
@@ -465,7 +585,86 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
                 </div>
               </div>
 
-              {/* 3. DESCRIPTION (Inline Editable, Save on Blur, Escape to cancel) */}
+              {/* 3. ASSIGNEES PICKER */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                    Assignees ({assignedUserIds.length})
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {assignedUserIds.map((memberId) => {
+                    const member = orgMembers.find((m) => m.id === memberId);
+                    return (
+                      <div
+                        key={memberId}
+                        className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-[var(--color-muted)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-foreground)]"
+                      >
+                        <Avatar name={member?.name || (memberId === "me" ? "You" : memberId)} size="sm" className="w-5 h-5 text-[10px]" />
+                        <span>{member?.name || (memberId === "me" ? "You" : "Team Member")}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAssignee(memberId)}
+                          className="hover:text-[var(--color-destructive)] cursor-pointer ml-0.5"
+                          title="Remove assignee"
+                          aria-label="Remove assignee"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Assignee Dropdown Picker */}
+                  <div ref={assigneePickerRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsAssigneePickerOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-dashed border-[var(--color-border)] hover:border-[var(--color-primary)] text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Assign</span>
+                    </button>
+
+                    {isAssigneePickerOpen && (
+                      <div className="absolute left-0 mt-2 z-50 w-64 bg-[var(--color-card)] rounded-[var(--radius-lg)] border border-[var(--color-border)] shadow-[var(--shadow-lg)] p-2 space-y-1 animate-in fade-in zoom-in-95">
+                        <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted-foreground)] border-b border-[var(--color-border)] mb-1">
+                          Workspace Members
+                        </div>
+                        {orgMembers.map((member) => {
+                          const isAssigned = assignedUserIds.includes(member.id);
+                          return (
+                            <button
+                              key={member.id}
+                              type="button"
+                              onClick={() => handleToggleAssignee(member.id)}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[var(--radius-md)] text-xs text-left transition-colors cursor-pointer ${
+                                isAssigned
+                                  ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold"
+                                  : "hover:bg-[var(--color-muted)] text-[var(--color-foreground)]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Avatar name={member.name} size="sm" className="w-5 h-5 text-[10px]" />
+                                <div className="truncate">
+                                  <div>{member.name}</div>
+                                  <div className="text-[10px] text-[var(--color-muted-foreground)] font-normal truncate">
+                                    {member.role}
+                                  </div>
+                                </div>
+                              </div>
+                              {isAssigned && <Check className="w-3.5 h-3.5 shrink-0 ml-1 text-[var(--color-primary)]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. DESCRIPTION (Inline Editable, Save on Blur, Escape to cancel) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted-foreground)]">
                   Description
