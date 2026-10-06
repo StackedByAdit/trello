@@ -83,11 +83,13 @@ function getUserColor(userId: string | number): string {
 interface SortableIssueCardProps {
   issue: Issue;
   sectionId: string;
+  onClick?: (issue: Issue) => void;
 }
 
 const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
   issue,
   sectionId,
+  onClick,
 }) => {
   const {
     attributes,
@@ -127,8 +129,19 @@ const SortableIssueCard: React.FC<SortableIssueCardProps> = ({
       {...attributes}
       {...listeners}
       tabIndex={0}
+      role="button"
       aria-label={`Issue: ${issue.title}`}
-      className="group relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3.5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--color-primary)]/50 transition-all duration-150 cursor-grab active:cursor-grabbing select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      onClick={(e) => {
+        if (e.button !== 0) return;
+        onClick?.(issue);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.(issue);
+        }
+      }}
+      className="group relative bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3.5 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:border-[var(--color-primary)]/50 transition-all duration-150 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
       <div className="text-sm font-medium text-[var(--color-foreground)] leading-snug line-clamp-3 mb-2.5">
         {issue.title}
@@ -184,6 +197,7 @@ interface BoardColumnProps {
   onRenameSection: (sectionId: string, title: string) => Promise<void>;
   onDeleteSectionClick: (section: Section) => void;
   onAddIssue: (sectionId: string, title: string) => Promise<void>;
+  onIssueClick?: (issue: Issue) => void;
 }
 
 const BoardColumn: React.FC<BoardColumnProps> = ({
@@ -192,6 +206,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
   onRenameSection,
   onDeleteSectionClick,
   onAddIssue,
+  onIssueClick,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: section.id,
@@ -356,6 +371,7 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
               key={issue.id}
               issue={issue}
               sectionId={section.id}
+              onClick={onIssueClick}
             />
           ))}
 
@@ -444,6 +460,18 @@ export const BoardPage: React.FC = () => {
       navigate(`/board/${boardId}`);
     }
   }, [boardId, navigate]);
+
+  const isDraggingRef = useRef(false);
+
+  const handleIssueClick = useCallback(
+    (clickedIssue: Issue) => {
+      if (isDraggingRef.current) return;
+      if (boardId) {
+        navigate(`/board/${boardId}/issue/${clickedIssue.id}`);
+      }
+    },
+    [boardId, navigate]
+  );
 
   // Sections & Issues State
   const [sections, setSections] = useState<Section[]>([]);
@@ -755,12 +783,20 @@ export const BoardPage: React.FC = () => {
 
   // Drag and drop event handlers
   const handleDragStart = (event: DragStartEvent) => {
+    isDraggingRef.current = true;
     const { active } = event;
     const issue = issues.find((i) => i.id === active.id);
     if (issue) {
       setActiveDragIssue(issue);
       dragSourceSectionId.current = issue.sectionId;
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragIssue(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 100);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -800,6 +836,9 @@ export const BoardPage: React.FC = () => {
     const activeId = String(active.id);
 
     setActiveDragIssue(null);
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 100);
 
     if (!over) {
       // If dropped outside, revert to source section
@@ -995,6 +1034,7 @@ export const BoardPage: React.FC = () => {
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 sm:p-6 flex flex-row items-start gap-4 sm:gap-6 min-h-0 scrollbar-thin">
             {/* Render Columns */}
@@ -1010,6 +1050,7 @@ export const BoardPage: React.FC = () => {
                   onRenameSection={handleRenameSection}
                   onDeleteSectionClick={(s) => setDeleteSectionTarget(s)}
                   onAddIssue={handleAddIssue}
+                  onIssueClick={handleIssueClick}
                 />
               );
             })}
