@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import {
   DndContext,
   DragOverlay,
@@ -55,6 +55,7 @@ import { Dropdown, type DropdownItem } from "../components/ui/Dropdown";
 import { Avatar } from "../components/ui/Avatar";
 import { Badge } from "../components/ui/Badge";
 import { Spinner } from "../components/ui/Spinner";
+import { IssueDetailDrawer } from "../components/issue";
 
 // User presence colors
 const USER_COLORS = [
@@ -430,11 +431,19 @@ const BoardColumn: React.FC<BoardColumnProps> = ({
 // 3. Main BoardPage Component
 // ==========================================
 export const BoardPage: React.FC = () => {
-  const { boardId } = useParams<{ boardId: string }>();
+  const { boardId, issueId } = useParams<{ boardId: string; issueId?: string }>();
+  const navigate = useNavigate();
   const { boards } = useWorkspace();
   const { toast } = useToast();
 
   const currentBoard = boards.find((b) => b.id === boardId);
+
+  // Close drawer handler
+  const handleCloseDrawer = useCallback(() => {
+    if (boardId) {
+      navigate(`/board/${boardId}`);
+    }
+  }, [boardId, navigate]);
 
   // Sections & Issues State
   const [sections, setSections] = useState<Section[]>([]);
@@ -1120,6 +1129,17 @@ export const BoardPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* ================= ISSUE DETAIL DRAWER ================= */}
+      {issueId && boardId && (
+        <IssueDetailDrawer
+          boardId={boardId}
+          issueId={issueId}
+          sections={sections}
+          initialIssue={issues.find((i) => i.id === issueId)}
+          onClose={handleCloseDrawer}
+        />
+      )}
     </div>
   );
 };
