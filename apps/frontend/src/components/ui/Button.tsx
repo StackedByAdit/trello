@@ -36,7 +36,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantClasses = {
       primary:
-        "bg-[var(--color-accent)] text-white hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 shadow-[var(--shadow-sm)]",
+        "bg-[var(--color-accent)] text-[var(--color-on-accent)] hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 shadow-[var(--shadow-sm)]",
       secondary:
         "bg-transparent text-[var(--color-primary)] border-2 border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 active:translate-y-0 font-semibold",
       outline:
