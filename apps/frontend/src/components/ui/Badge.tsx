@@ -30,7 +30,7 @@ export const Badge: React.FC<BadgeProps> = ({
     outline:
       "bg-transparent text-[var(--color-foreground)] border border-[var(--color-border)]",
     success:
-      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30",
+      "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30",
     destructive:
       "bg-[var(--color-destructive)]/15 text-[var(--color-destructive)] border border-[var(--color-destructive)]/30",
   };
@@ -42,7 +42,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center font-medium leading-none select-none tracking-tight ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center font-medium leading-none select-none tracking-tight whitespace-nowrap shrink-0 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
       {dot && (
