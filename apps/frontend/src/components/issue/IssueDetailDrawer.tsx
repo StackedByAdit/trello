@@ -627,7 +627,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
         {/* ================= DRAWER TOP BAR ================= */}
         <div className="h-14 px-4 sm:px-6 border-b border-[var(--color-border)] flex items-center justify-between gap-3 shrink-0 bg-[var(--color-card)]">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary)] text-white flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center shrink-0">
               <Kanban className="w-4 h-4" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] truncate">
@@ -640,7 +640,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/10 rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+                className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/10 rounded-[var(--radius-sm)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                 title="Delete issue"
                 aria-label="Delete issue"
               >
@@ -650,7 +650,7 @@ export const IssueDetailDrawer: React.FC<IssueDetailDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] rounded-[var(--radius-sm)] transition-colors cursor-pointer"
+              className="p-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-muted)] rounded-[var(--radius-sm)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
               title="Close drawer (Esc)"
               aria-label="Close drawer"
             >

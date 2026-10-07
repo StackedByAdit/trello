@@ -1,5 +1,5 @@
 import "./index.css";
-import { Route, Routes, BrowserRouter } from "react-router";
+import { Route, Routes, BrowserRouter, Navigate } from "react-router";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./components/ui/Toast";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
@@ -54,7 +54,7 @@ export function App() {
                   />
                   <Route
                     path="/members"
-                    element={<SimplePlaceholder title="Workspace Members" />}
+                    element={<Navigate to="/settings" replace />}
                   />
                   <Route
                     path="/settings"
@@ -68,19 +68,6 @@ export function App() {
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>
-  );
-}
-
-function SimplePlaceholder({ title }: { title: string }) {
-  return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-bold text-[var(--color-foreground)] mb-2">
-        {title}
-      </h1>
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        This section is ready for page implementation.
-      </p>
-    </div>
   );
 }
 
