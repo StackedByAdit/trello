@@ -12,6 +12,7 @@ import {
   OnboardingPage,
   DashboardPage,
   BoardPage,
+  SettingsPage,
 } from "./pages";
 
 export function App() {
@@ -57,7 +58,7 @@ export function App() {
                   />
                   <Route
                     path="/settings"
-                    element={<SimplePlaceholder title="Organization Settings" />}
+                    element={<SettingsPage />}
                   />
                   <Route path="*" element={<DashboardPage />} />
                 </Route>
