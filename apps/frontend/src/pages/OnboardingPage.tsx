@@ -78,10 +78,10 @@ export const OnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 sm:p-6 bg-[var(--color-background)] text-[var(--color-foreground)] selection:bg-[var(--color-primary)] selection:text-white">
+    <div className="min-h-screen w-full flex flex-col justify-center items-center p-4 sm:p-6 bg-[var(--color-background)] text-[var(--color-foreground)] selection:bg-[var(--color-primary)] selection:text-[var(--color-on-primary)]">
       <main className="w-full max-w-[480px] bg-[var(--color-card)] border border-[var(--color-border)] rounded-[var(--radius-xl)] p-6 sm:p-8 shadow-[var(--shadow-xl)] animate-in fade-in">
         <div className="flex flex-col items-center mb-6 text-center select-none">
-          <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-white flex items-center justify-center shadow-[var(--shadow-md)] mb-3">
+          <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center shadow-[var(--shadow-md)] mb-3">
             <Building2 className="w-6 h-6" aria-hidden="true" />
           </div>
           <Badge variant="accent" size="sm" className="mb-2">
