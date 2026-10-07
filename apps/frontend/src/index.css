@@ -176,8 +176,15 @@ html, body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global focus-visible accessibility rule */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
 /* Reduced motion accessibility rule */
