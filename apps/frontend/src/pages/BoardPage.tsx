@@ -46,7 +46,7 @@ import {
   createIssue,
   moveIssue,
 } from "../lib/api";
-import type { Section, Issue } from "../lib/types";
+import type { Section, Issue, IssueWithComments } from "../lib/types";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { useToast } from "../components/ui/Toast";
 import { Button } from "../components/ui/Button";
@@ -487,15 +487,26 @@ export const BoardPage: React.FC = () => {
   const dragSourceSectionId = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
 
+  // Reset drag flag on pointerup to prevent stuck drag state
+  useEffect(() => {
+    const handlePointerUp = () => {
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 50);
+    };
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => window.removeEventListener("pointerup", handlePointerUp);
+  }, []);
+
   // Drawer and navigation callbacks
   const handleIssueClick = useCallback(
     (clickedIssue: Issue) => {
-      if (isDraggingRef.current) return;
+      if (isDraggingRef.current || activeDragIssue) return;
       if (boardId) {
         navigate(`/board/${boardId}/issue/${clickedIssue.id}`);
       }
     },
-    [boardId, navigate]
+    [boardId, navigate, activeDragIssue]
   );
 
   const handleCloseDrawer = useCallback(() => {
@@ -965,7 +976,7 @@ export const BoardPage: React.FC = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary)] text-white flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center shrink-0">
             <Kanban className="w-4 h-4" />
           </div>
           <h1 className="text-base sm:text-lg font-bold text-[var(--color-foreground)] truncate">
@@ -1030,7 +1041,7 @@ export const BoardPage: React.FC = () => {
             {wsStatus === "connected" ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                <span className="hidden sm:inline text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">
                   Live
                 </span>
                 <Wifi className="w-3.5 h-3.5 text-emerald-500 sm:hidden" />
@@ -1038,7 +1049,7 @@ export const BoardPage: React.FC = () => {
             ) : wsStatus === "connecting" ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="hidden sm:inline text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
+                <span className="hidden sm:inline text-amber-700 dark:text-amber-400 font-semibold text-[11px]">
                   Connecting...
                 </span>
                 <Wifi className="w-3.5 h-3.5 text-amber-500 animate-pulse sm:hidden" />
@@ -1046,7 +1057,7 @@ export const BoardPage: React.FC = () => {
             ) : (
               <>
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span className="hidden sm:inline text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
+                <span className="hidden sm:inline text-rose-700 dark:text-rose-400 font-semibold text-[11px]">
                   Offline
                 </span>
                 <WifiOff className="w-3.5 h-3.5 text-rose-500 sm:hidden" />
