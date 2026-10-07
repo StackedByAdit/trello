@@ -2,23 +2,23 @@
 @import "tailwindcss";
 
 :root {
-  /* Colors from MASTER.md */
-  --color-primary: #0D9488;
+  /* Colors from MASTER.md with verified >= 4.5:1 text contrast */
+  --color-primary: #0F766E;
   --color-on-primary: #FFFFFF;
   --color-secondary: #14B8A6;
   --color-on-secondary: #0F172A;
-  --color-accent: #EA580C;
+  --color-accent: #C2410C;
   --color-on-accent: #FFFFFF;
   --color-background: #F0FDFA;
-  --color-foreground: #134E4A;
+  --color-foreground: #0F3D39;
   --color-card: #FFFFFF;
-  --color-card-foreground: #134E4A;
+  --color-card-foreground: #0F3D39;
   --color-muted: #E8F1F4;
-  --color-muted-foreground: #475569;
+  --color-muted-foreground: #334155;
   --color-border: #99F6E4;
-  --color-destructive: #DC2626;
+  --color-destructive: #B91C1C;
   --color-on-destructive: #FFFFFF;
-  --color-ring: #0D9488;
+  --color-ring: #0F766E;
 
   /* Spacing Scale from MASTER.md */
   --space-xs: 4px;
@@ -46,12 +46,12 @@
 /* System Dark Mode (when no explicit user override) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not(.light) {
-    --color-primary: #14B8A6;
+    --color-primary: #2DD4BF;
     --color-on-primary: #042F2E;
-    --color-secondary: #2DD4BF;
+    --color-secondary: #14B8A6;
     --color-on-secondary: #042F2E;
-    --color-accent: #EA580C;
-    --color-on-accent: #FFFFFF;
+    --color-accent: #FB923C;
+    --color-on-accent: #431407;
     --color-background: #0B1319;
     --color-foreground: #F0FDFA;
     --color-card: #132228;
@@ -59,9 +59,9 @@
     --color-muted: #1A2E35;
     --color-muted-foreground: #94A3B8;
     --color-border: #1F3F45;
-    --color-destructive: #EF4444;
-    --color-on-destructive: #FFFFFF;
-    --color-ring: #14B8A6;
+    --color-destructive: #F87171;
+    --color-on-destructive: #450A0A;
+    --color-ring: #2DD4BF;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45);
@@ -74,12 +74,12 @@
 :root[data-theme="dark"],
 :root.dark,
 .dark {
-  --color-primary: #14B8A6;
+  --color-primary: #2DD4BF;
   --color-on-primary: #042F2E;
-  --color-secondary: #2DD4BF;
+  --color-secondary: #14B8A6;
   --color-on-secondary: #042F2E;
-  --color-accent: #EA580C;
-  --color-on-accent: #FFFFFF;
+  --color-accent: #FB923C;
+  --color-on-accent: #431407;
   --color-background: #0B1319;
   --color-foreground: #F0FDFA;
   --color-card: #132228;
@@ -87,9 +87,9 @@
   --color-muted: #1A2E35;
   --color-muted-foreground: #94A3B8;
   --color-border: #1F3F45;
-  --color-destructive: #EF4444;
-  --color-on-destructive: #FFFFFF;
-  --color-ring: #14B8A6;
+  --color-destructive: #F87171;
+  --color-on-destructive: #450A0A;
+  --color-ring: #2DD4BF;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45);
@@ -101,22 +101,22 @@
 :root[data-theme="light"],
 :root.light,
 .light {
-  --color-primary: #0D9488;
+  --color-primary: #0F766E;
   --color-on-primary: #FFFFFF;
   --color-secondary: #14B8A6;
   --color-on-secondary: #0F172A;
-  --color-accent: #EA580C;
+  --color-accent: #C2410C;
   --color-on-accent: #FFFFFF;
   --color-background: #F0FDFA;
-  --color-foreground: #134E4A;
+  --color-foreground: #0F3D39;
   --color-card: #FFFFFF;
-  --color-card-foreground: #134E4A;
+  --color-card-foreground: #0F3D39;
   --color-muted: #E8F1F4;
-  --color-muted-foreground: #475569;
+  --color-muted-foreground: #334155;
   --color-border: #99F6E4;
-  --color-destructive: #DC2626;
+  --color-destructive: #B91C1C;
   --color-on-destructive: #FFFFFF;
-  --color-ring: #0D9488;
+  --color-ring: #0F766E;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
