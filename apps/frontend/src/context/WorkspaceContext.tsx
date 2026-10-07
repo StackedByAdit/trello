@@ -9,6 +9,8 @@ import React, {
 import {
   getOrganizations as apiGetOrganizations,
   createOrganization as apiCreateOrganization,
+  updateOrganization as apiUpdateOrganization,
+  deleteOrganization as apiDeleteOrganization,
   getBoards as apiGetBoards,
   createBoard as apiCreateBoard,
   updateBoard as apiUpdateBoard,
@@ -36,6 +38,8 @@ export interface WorkspaceContextType {
   fetchOrganizations: () => Promise<Organization[]>;
   fetchBoards: (orgId?: string) => Promise<Board[]>;
   createOrg: (input: CreateOrganizationInput) => Promise<Organization>;
+  updateOrg: (input: { orgId: string; name: string; description?: string | null }) => Promise<Organization>;
+  deleteOrg: (orgId: string) => Promise<void>;
   createBoard: (title: string) => Promise<Board>;
   updateBoard: (boardId: string, title: string) => Promise<Board>;
   deleteBoard: (boardId: string) => Promise<void>;
@@ -201,6 +205,74 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const updateOrg = async (input: {
+    orgId: string;
+    name: string;
+    description?: string | null;
+  }): Promise<Organization> => {
+    try {
+      const updated = await apiUpdateOrganization(input);
+      setOrganizations((prev) =>
+        prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o))
+      );
+      if (activeOrgRef.current?.id === updated.id) {
+        setActiveOrgState((prev) => (prev ? { ...prev, ...updated } : updated));
+      }
+      toast({
+        title: "Workspace updated",
+        description: `Settings saved for ${updated.name}.`,
+        variant: "success",
+      });
+      return updated;
+    } catch (err: any) {
+      const msg =
+        err?.data?.message || err?.message || "Failed to update workspace";
+      toast({
+        title: "Could not update workspace",
+        description: msg,
+        variant: "error",
+      });
+      throw err;
+    }
+  };
+
+  const deleteOrg = async (orgId: string): Promise<void> => {
+    try {
+      await apiDeleteOrganization(orgId);
+      const remaining = organizations.filter((o) => o.id !== orgId);
+      setOrganizations(remaining);
+
+      if (activeOrgRef.current?.id === orgId) {
+        if (remaining.length > 0) {
+          setActiveOrg(remaining[0]!);
+        } else {
+          setActiveOrgState(null);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
+            } catch {}
+          }
+        }
+        setBoards([]);
+      }
+
+      toast({
+        title: "Workspace deleted",
+        description: "Organization removed successfully.",
+        variant: "success",
+      });
+    } catch (err: any) {
+      const msg =
+        err?.data?.message || err?.message || "Failed to delete workspace";
+      toast({
+        title: "Could not delete workspace",
+        description: msg,
+        variant: "error",
+      });
+      throw err;
+    }
+  };
+
   const createBoard = async (title: string): Promise<Board> => {
     if (!activeOrgRef.current) {
       const err = new Error("No active organization selected");
@@ -332,6 +404,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
         fetchOrganizations,
         fetchBoards,
         createOrg,
+        updateOrg,
+        deleteOrg,
         createBoard,
         updateBoard,
         deleteBoard,
