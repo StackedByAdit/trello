@@ -1,6 +1,7 @@
 import type {
   User,
   Organization,
+  Membership,
   Board,
   Section,
   Issue,
@@ -11,6 +12,7 @@ import type {
   SignupInput,
   SigninInput,
   CreateOrganizationInput,
+  UpdateOrganizationInput,
   DeleteOrganizationInput,
   InviteInput,
   AcceptInput,
@@ -145,6 +147,21 @@ export async function createOrganization(
   return apiFetch<Organization>("/organization", {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function updateOrganization(
+  body: UpdateOrganizationInput
+): Promise<Organization> {
+  return apiFetch<Organization>("/organization", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getMembers(orgId: string): Promise<Membership[]> {
+  return apiFetch<Membership[]>(`/members?orgId=${encodeURIComponent(orgId)}`, {
+    method: "GET",
   });
 }
 
@@ -347,7 +364,9 @@ export const api = {
   signin,
   getOrganizations,
   createOrganization,
+  updateOrganization,
   deleteOrganization,
+  getMembers,
   invite,
   accept,
   removeMember,

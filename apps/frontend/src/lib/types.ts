@@ -118,6 +118,12 @@ export interface CreateOrganizationInput {
   description?: string;
 }
 
+export interface UpdateOrganizationInput {
+  orgId: string;
+  name: string;
+  description?: string | null;
+}
+
 export interface DeleteOrganizationInput {
   orgId: string;
 }

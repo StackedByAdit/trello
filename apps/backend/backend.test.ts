@@ -277,6 +277,43 @@ describe("Organization Routes (/organization, /organizations, /invite, /accept, 
     expect(resDel.status).toBe(403);
   });
 
+  it("PUT /organization — happy path: admin updates org name and description", async () => {
+    const res = await api("/organization", {
+      method: "PUT",
+      token: tokenA,
+      body: { orgId: orgAId, name: "Org Alpha Updated", description: "New description" },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe("Org Alpha Updated");
+    expect(res.body.description).toBe("New description");
+  });
+
+  it("PUT /organization — non-admin user B cannot update org (403)", async () => {
+    const res = await api("/organization", {
+      method: "PUT",
+      token: tokenB,
+      body: { orgId: orgAId, name: "Hacked Org" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("GET /members — happy path: returns members of org with roles", async () => {
+    const res = await api(`/members?orgId=${orgAId}`, { token: tokenA });
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(2);
+    // User A should be ADMIN
+    const admin = res.body.find((m: any) => m.userId === userAId);
+    expect(admin).toBeDefined();
+    expect(admin.role).toBe("ADMIN");
+    expect(admin.user.email).toBe("userA@test.com");
+    // User B should be MEMBER
+    const member = res.body.find((m: any) => m.userId === userBId);
+    expect(member).toBeDefined();
+    expect(member.role).toBe("MEMBER");
+    expect(member.user.email).toBe("userB@test.com");
+  });
+
   it("DELETE /organization — non-admin user B cannot delete user A's org (403)", async () => {
     const res = await api("/organization", {
       method: "DELETE",
