@@ -135,10 +135,130 @@ app.get("/organizations", authMiddleware, async (req: any, res: any) => {
                     userId : req.userId
                 }
             }
+        },
+        include : {
+            memberships : {
+                include : {
+                    user : {
+                        select : {
+                            id : true,
+                            email : true,
+                            createdAt : true
+                        }
+                    }
+                }
+            }
         }
     });
 
     res.json(organizations);
+});
+
+app.put("/organization", authMiddleware, async (req: any, res: any) => {
+
+    const { orgId, name, description } = req.body;
+
+    if (!orgId || !name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({
+            message : "orgId and name are required"
+        });
+    }
+
+    const org = await prisma.organization.findFirst({
+        where : {
+            id : orgId
+        }
+    });
+
+    if (!org) {
+        return res.status(404).json({
+            message : "organization not found"
+        });
+    }
+
+    const adminMembership = await prisma.membership.findFirst({
+        where : {
+            userId : req.userId,
+            orgId,
+            role : "ADMIN"
+        }
+    });
+
+    if (!adminMembership) {
+        return res.status(403).json({
+            message : "forbidden"
+        });
+    }
+
+    const updated = await prisma.organization.update({
+        where : {
+            id : orgId
+        },
+        data : {
+            name : name.trim(),
+            description : description !== undefined ? (description === null ? null : String(description).trim()) : undefined
+        },
+        include : {
+            memberships : {
+                include : {
+                    user : {
+                        select : {
+                            id : true,
+                            email : true,
+                            createdAt : true
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    res.json(updated);
+});
+
+app.get("/members", authMiddleware, async (req: any, res: any) => {
+
+    const { orgId } = req.query;
+
+    if (!orgId) {
+        return res.status(400).json({
+            message : "orgId is required"
+        });
+    }
+
+    const membership = await prisma.membership.findFirst({
+        where : {
+            userId : req.userId,
+            orgId : orgId as string
+        }
+    });
+
+    if (!membership) {
+        return res.status(403).json({
+            message : "forbidden"
+        });
+    }
+
+    const members = await prisma.membership.findMany({
+        where : {
+            orgId : orgId as string
+        },
+        include : {
+            user : {
+                select : {
+                    id : true,
+                    email : true,
+                    createdAt : true
+                }
+            }
+        },
+        orderBy : [
+            { role : "asc" },
+            { id : "asc" }
+        ]
+    });
+
+    res.json(members);
 });
 
 app.delete("/organization", authMiddleware, async (req: any, res: any) => {
