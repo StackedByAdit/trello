@@ -34,11 +34,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className={`w-full px-3.5 py-2.5 bg-[var(--color-card)] text-[var(--color-foreground)] border rounded-[var(--radius-md)] text-sm transition-all duration-200 outline-none resize-y
             ${
               error
-                ? "border-[var(--color-destructive)] focus:ring-2 focus:ring-[var(--color-destructive)]/20"
-                : "border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-ring)]/25"
+                ? "border-[var(--color-destructive)] focus:ring-2 focus:ring-[var(--color-destructive)]"
+                : "border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-ring)]"
             }
             disabled:opacity-50 disabled:cursor-not-allowed
-            placeholder:text-[var(--color-muted-foreground)]/70
+            placeholder:text-[var(--color-muted-foreground)]
             ${className}`}
           {...props}
         />

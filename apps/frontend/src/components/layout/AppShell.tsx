@@ -173,7 +173,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       : `${theme.charAt(0).toUpperCase() + theme.slice(1)} Theme`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] font-sans antialiased selection:bg-[var(--color-primary)] selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[var(--color-background)] text-[var(--color-foreground)] font-sans antialiased selection:bg-[var(--color-primary)] selection:text-[var(--color-on-primary)]">
       {/* ================= TOP NAVIGATION BAR ================= */}
       <header className="sticky top-0 z-30 h-14 w-full bg-[var(--color-card)] border-b border-[var(--color-border)] px-3 sm:px-4 flex items-center justify-between gap-2 shadow-[var(--shadow-sm)]">
         {/* Left Side: Mobile Menu Button + Brand Logo + Top Bar Org Switcher */}
@@ -194,7 +194,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             to="/dashboard"
             className="flex items-center gap-2 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] rounded-[var(--radius-sm)]"
           >
-            <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white flex items-center justify-center shadow-[var(--shadow-sm)]">
+            <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center shadow-[var(--shadow-sm)]">
               <Kanban className="w-4 h-4" aria-hidden="true" />
             </div>
             <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)]">
@@ -312,7 +312,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           {/* Mobile Drawer Header (close button) */}
           <div className="lg:hidden flex items-center justify-between p-3.5 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white flex items-center justify-center">
+              <div className="w-7 h-7 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center">
                 <Kanban className="w-4 h-4" />
               </div>
               <span className="font-bold text-sm">Trello</span>
